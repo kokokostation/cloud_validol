@@ -1,1 +1,1 @@
-recursive-include src/postgresql *
+recursive-include src/cloud_validol/postgresql *

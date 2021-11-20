@@ -43,7 +43,7 @@ def _get_intervals(engine) -> Dict[int, Dict[str, str]]:
         from_date = last_event_dt + dt.timedelta(days=1)
         from_date_str = from_date.strftime('%d/%m/%Y')
 
-        if last_event_dt == to_date:
+        if from_date == to_date:
             logger.info('Data for %s is already up-to-date', row.info_currency_cross)
 
             continue
