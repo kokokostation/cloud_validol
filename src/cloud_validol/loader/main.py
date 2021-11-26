@@ -9,7 +9,7 @@ def main():
     logging.basicConfig(
         format='%(asctime)s %(levelname)s:%(message)s',
         level=logging.DEBUG,
-        datefmt='[%Y-%m-%d %H:%M:%S]'
+        datefmt='[%Y-%m-%d %H:%M:%S]',
     )
 
     engine = pg.get_engine()

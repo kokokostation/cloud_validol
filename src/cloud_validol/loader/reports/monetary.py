@@ -20,15 +20,14 @@ def update(engine, conn):
             params={
                 'id': graph_id,
             },
-            headers={
-                'Host': 'fred.stlouisfed.org',
-                'User-Agent': 'Mozilla/5.0'
-            }
+            headers={'Host': 'fred.stlouisfed.org', 'User-Agent': 'Mozilla/5.0'},
         )
 
         df = pd.read_csv(io.StringIO(response.text))
         df = df.replace('.', np.nan).dropna()
-        df['event_dttm'] = df['DATE'].map(lambda x: dt.datetime.fromisoformat(x).replace(tzinfo=pytz.UTC))
+        df['event_dttm'] = df['DATE'].map(
+            lambda x: dt.datetime.fromisoformat(x).replace(tzinfo=pytz.UTC)
+        )
         df['sensor'] = sensor
         df = df.rename(columns={graph_id: 'value'})
         del df['DATE']
@@ -40,11 +39,7 @@ def update(engine, conn):
     conn.commit()
 
     pd.concat(dfs).to_sql(
-        'fredgraph',
-        engine,
-        schema='validol_internal',
-        index=False,
-        if_exists='append'
+        'fredgraph', engine, schema='validol_internal', index=False, if_exists='append'
     )
 
     logger.info('Finish updating stlouisfed data')
