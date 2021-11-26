@@ -17,8 +17,8 @@ def _get_intervals(engine) -> Dict[int, Dict[str, str]]:
             info.id AS info_id,
             info.currency_cross AS info_currency_cross,
             MAX(event_dttm) AS last_event_dttm
-        FROM validol.investing_prices_info AS info
-        LEFT JOIN validol.investing_prices_data AS data 
+        FROM validol_internal.investing_prices_info AS info
+        LEFT JOIN validol_internal.investing_prices_data AS data 
             ON data.investing_prices_info_id = info.id
         GROUP BY info.id
     ''', engine)
@@ -78,7 +78,7 @@ def update(engine):
         df.to_sql(
             'investing_prices_data',
             engine,
-            schema='validol',
+            schema='validol_internal',
             index=True,
             index_label='event_dttm',
             if_exists='append'
