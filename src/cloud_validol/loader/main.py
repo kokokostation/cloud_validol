@@ -2,6 +2,7 @@ import logging
 
 from cloud_validol.loader.lib import pg
 from cloud_validol.loader.reports import prices
+from cloud_validol.loader.reports import monetary
 
 
 def main():
@@ -12,5 +13,7 @@ def main():
     )
 
     engine = pg.get_engine()
+    conn = pg.get_connection()
 
     prices.update(engine)
+    monetary.update(engine, conn)

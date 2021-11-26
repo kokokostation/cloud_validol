@@ -28,6 +28,13 @@ CREATE TABLE validol_internal.investing_prices_data
     close_price              DECIMAL     NOT NULL
 );
 
+CREATE TABLE validol_internal.fredgraph
+(
+    id                       BIGSERIAL PRIMARY KEY,
+    event_dttm               TIMESTAMPTZ NOT NULL,
+    sensor                   VARCHAR NOT NULL,
+    value                    DECIMAL NOT NULL
+);
 
 -- views for superset usage
 
@@ -47,3 +54,10 @@ SELECT
 FROM validol_internal.investing_prices_data AS data
 INNER JOIN validol_internal.investing_prices_info AS info
     ON data.investing_prices_info_id = info.id;
+
+CREATE VIEW validol.fredgraph AS
+SELECT
+   event_dttm,
+   sensor,
+   value
+FROM validol_internal.fredgraph;
