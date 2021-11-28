@@ -1,12 +1,17 @@
 import dataclasses
 import datetime as dt
+import io
 import logging
 from typing import Dict
 from typing import List
 from typing import Optional
 
 import pandas as pd
+import psycopg2
+import pytz
 import sqlalchemy
+
+from cloud_validol.loader.lib import pg
 
 logger = logging.getLogger(__name__)
 
@@ -14,6 +19,7 @@ logger = logging.getLogger(__name__)
 @dataclasses.dataclass
 class DerivativeConfig:
     name: str
+    source: str
     table_name: str
     platform_code_col: str
     derivative_name_col: str
@@ -70,4 +76,117 @@ def get_interval(
     return UpdateInterval(
         load_initial=False,
         years_to_load=list(range(last_event_dt.year, today.year + 1)),
+    )
+
+
+def csv_to_dataframe(
+    config: DerivativeConfig, date_format: str, csv_buff: str
+) -> pd.DataFrame:
+    usecols = [
+        config.platform_code_col,
+        config.derivative_name_col,
+        config.date_col,
+    ] + list(config.data_cols)
+    df = pd.read_csv(
+        io.StringIO(csv_buff),
+        usecols=usecols,
+        parse_dates=[config.date_col],
+        date_parser=lambda x: dt.datetime.strptime(x, date_format).replace(
+            tzinfo=pytz.UTC
+        ),
+    )
+
+    df = df.rename(
+        columns={
+            **config.data_cols,
+            **{
+                config.platform_code_col: 'platform_code',
+                config.date_col: 'event_dttm',
+            },
+        }
+    )
+
+    df.platform_code = [x.strip() for x in df.platform_code]
+
+    platform_names = []
+    derivative_names = []
+    for derivative_dash_platform in df[config.derivative_name_col]:
+        derivative_name, platform_name = derivative_dash_platform.rsplit('-', 1)
+        platform_names.append(platform_name.strip())
+        derivative_names.append(derivative_name.strip())
+
+    df['platform_name'] = platform_names
+    df['derivative_name'] = derivative_names
+
+    del df[config.derivative_name_col]
+
+    return df
+
+
+def insert_platforms_derivatives(
+    conn: psycopg2.extensions.connection, config: DerivativeConfig, df: pd.DataFrame
+):
+    derivatives = set()
+    platforms = {}
+    for _, row in df.iterrows():
+        derivatives.add((row.platform_code, row.derivative_name))
+        platforms[row.platform_code] = row.platform_name
+
+    platform_codes, platform_names = zip(*platforms.items())
+
+    with conn.cursor() as cursor:
+        cursor.execute(
+            '''
+            INSERT INTO validol_internal.cot_derivatives_platform (source, code, name)
+            SELECT %s, UNNEST(%s), UNNEST(%s)
+            ON CONFLICT (source, code) DO UPDATE SET
+                name = EXCLUDED.name
+            RETURNING id
+        ''',
+            (config.source, list(platform_codes), list(platform_names)),
+        )
+        platform_ids = dict(zip(platform_codes, pg.extract_ids_from_cursor(cursor)))
+
+        derivative_platform_ids, derivative_names = zip(
+            *[
+                (platform_ids[platform_code], derivative_name)
+                for platform_code, derivative_name in derivatives
+            ]
+        )
+        cursor.execute(
+            '''
+            INSERT INTO validol_internal.cot_derivatives_info (cot_derivatives_platform_id, name)
+            SELECT UNNEST(%s), UNNEST(%s)
+            ON CONFLICT (cot_derivatives_platform_id, name) DO UPDATE SET
+                name = EXCLUDED.name
+            RETURNING id
+        ''',
+            (list(derivative_platform_ids), list(derivative_names)),
+        )
+
+        derivative_ids = dict(zip(derivatives, pg.extract_ids_from_cursor(cursor)))
+
+    conn.commit()
+
+    df['cot_derivatives_info_id'] = [
+        derivative_ids[row.platform_code, row.derivative_name]
+        for _, row in df.iterrows()
+    ]
+
+
+def insert_data(
+    engine: sqlalchemy.engine.base.Engine, config: DerivativeConfig, df: pd.DataFrame
+):
+    for column in ['platform_code', 'platform_name', 'derivative_name']:
+        del df[column]
+
+    df['report_type'] = config.report_type
+
+    df.to_sql(
+        config.table_name,
+        engine,
+        schema='validol_internal',
+        index=False,
+        if_exists='append',
+        method=pg.insert_on_conflict_do_nothing,
     )

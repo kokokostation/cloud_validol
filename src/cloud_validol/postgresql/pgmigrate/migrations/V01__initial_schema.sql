@@ -69,11 +69,12 @@ CREATE TABLE validol_internal.moex_derivatives_data
 
 CREATE TABLE validol_internal.cot_derivatives_platform
 (
-    id   BIGSERIAL PRIMARY KEY,
-    code VARCHAR NOT NULL,
-    name VARCHAR NOT NULL,
+    id     BIGSERIAL PRIMARY KEY,
+    source VARCHAR NOT NULL,
+    code   VARCHAR NOT NULL,
+    name   VARCHAR NOT NULL,
 
-    UNIQUE (code)
+    UNIQUE (source, code)
 );
 
 CREATE TABLE validol_internal.cot_derivatives_info
@@ -91,7 +92,7 @@ CREATE TABLE validol_internal.cot_futures_only_data
 (
     id                      BIGSERIAL PRIMARY KEY,
     cot_derivatives_info_id BIGINT      NOT NULL REFERENCES validol_internal.cot_derivatives_info (id),
-    report_type                    report_type NOT NULL,
+    report_type             report_type NOT NULL,
     event_dttm              TIMESTAMPTZ NOT NULL,
     oi                      DECIMAL,
     ncl                     DECIMAL,
@@ -111,9 +112,9 @@ CREATE TABLE validol_internal.cot_futures_only_data
 CREATE TABLE validol_internal.cot_disaggregated_data
 (
     id                      BIGSERIAL PRIMARY KEY,
-    cot_derivatives_info_id BIGINT             NOT NULL REFERENCES validol_internal.cot_derivatives_info (id),
-    report_type                    report_type NOT NULL,
-    event_dttm              TIMESTAMPTZ        NOT NULL,
+    cot_derivatives_info_id BIGINT      NOT NULL REFERENCES validol_internal.cot_derivatives_info (id),
+    report_type             report_type NOT NULL,
+    event_dttm              TIMESTAMPTZ NOT NULL,
     oi                      DECIMAL,
     nrl                     DECIMAL,
     nrs                     DECIMAL,
@@ -144,7 +145,7 @@ CREATE TABLE validol_internal.cot_financial_futures_data
 (
     id                      BIGSERIAL PRIMARY KEY,
     cot_derivatives_info_id BIGINT      NOT NULL REFERENCES validol_internal.cot_derivatives_info (id),
-    report_type                    report_type NOT NULL,
+    report_type             report_type NOT NULL,
     event_dttm              TIMESTAMPTZ NOT NULL,
     oi                      DECIMAL,
     dipl                    DECIMAL,
@@ -206,23 +207,23 @@ FROM validol_internal.moex_derivatives_data AS data
                     ON data.moex_derivatives_info_id = info.id;
 
 CREATE VIEW validol.cot_futures_only_data AS
-SELECT
-    platform.code AS platform_code,
-    platform.name AS platform_name,
-    info.name AS derivative_name,
-    data.report_type,
-    data.event_dttm,
-    data.oi,
-    data.ncl,
-    data.ncs,
-    data.cl,
-    data.cs,
-    data.nrl,
-    data.nrs,
-    data."4l%",
-    data."4s%",
-    data."8l%",
-    data."8s%"
+SELECT platform.source AS platform_source,
+       platform.code   AS platform_code,
+       platform.name   AS platform_name,
+       info.name       AS derivative_name,
+       data.report_type,
+       data.event_dttm,
+       data.oi,
+       data.ncl,
+       data.ncs,
+       data.cl,
+       data.cs,
+       data.nrl,
+       data.nrs,
+       data."4l%",
+       data."4s%",
+       data."8l%",
+       data."8s%"
 FROM validol_internal.cot_futures_only_data AS data
          INNER JOIN validol_internal.cot_derivatives_info AS info
                     ON data.cot_derivatives_info_id = info.id
@@ -230,34 +231,38 @@ FROM validol_internal.cot_futures_only_data AS data
                     ON info.cot_derivatives_platform_id = platform.id;
 
 CREATE VIEW validol.cot_disaggregated_data AS
-SELECT
-    platform.code AS platform_code,
-    platform.name AS platform_name,
-    info.name AS derivative_name,
-    data.report_type,
-    data.event_dttm,
-    data.oi,
-    data.nrl,
-    data.nrs,
-    data.pmpl,
-    data.pmps,
-    data.sdpl,
-    data.sdps,
-    data.mmpl,
-    data.mmps,
-    data.orpl,
-    data.orps,
-    data."4gl%",
-    data."4gs%",
-    data."8gl%",
-    data."8gs%",
-    data."4l%",
-    data."4s%",
-    data."8l%",
-    data."8s%",
-    data.sdps_pr,
-    data.mmps_pr,
-    data.orps_pr
+SELECT platform.source       AS platform_source,
+       platform.code         AS platform_code,
+       platform.name         AS platform_name,
+       info.name             AS derivative_name,
+       data.report_type,
+       data.event_dttm,
+       data.oi,
+       data.nrl,
+       data.nrs,
+       data.pmpl,
+       data.pmps,
+       data.sdpl,
+       data.sdps,
+       data.mmpl,
+       data.mmps,
+       data.orpl,
+       data.orps,
+       data."4gl%",
+       data."4gs%",
+       data."8gl%",
+       data."8gs%",
+       data."4l%",
+       data."4s%",
+       data."8l%",
+       data."8s%",
+       data.sdps_pr,
+       data.mmps_pr,
+       data.orps_pr,
+       data.pmpl + data.sdpl AS cl,
+       data.pmps + data.sdps AS cs,
+       data.mmpl + data.orpl AS ncl,
+       data.mmps + data.orps AS ncs
 FROM validol_internal.cot_disaggregated_data AS data
          INNER JOIN validol_internal.cot_derivatives_info AS info
                     ON data.cot_derivatives_info_id = info.id
@@ -265,27 +270,27 @@ FROM validol_internal.cot_disaggregated_data AS data
                     ON info.cot_derivatives_platform_id = platform.id;
 
 CREATE VIEW validol.cot_financial_futures_data AS
-SELECT
-    platform.code AS platform_code,
-    platform.name AS platform_name,
-    info.name AS derivative_name,
-    data.report_type,
-    data.event_dttm,
-    data.oi,
-    data.dipl,
-    data.dips,
-    data.dips_pr,
-    data.ampl,
-    data.amps,
-    data.amps_pr,
-    data.lmpl,
-    data.lmps,
-    data.lmps_pr,
-    data.orpl,
-    data.orps,
-    data.orps_pr,
-    data.nrl,
-    data.nrs
+SELECT platform.source AS platform_source,
+       platform.code   AS platform_code,
+       platform.name   AS platform_name,
+       info.name       AS derivative_name,
+       data.report_type,
+       data.event_dttm,
+       data.oi,
+       data.dipl,
+       data.dips,
+       data.dips_pr,
+       data.ampl,
+       data.amps,
+       data.amps_pr,
+       data.lmpl,
+       data.lmps,
+       data.lmps_pr,
+       data.orpl,
+       data.orps,
+       data.orps_pr,
+       data.nrl,
+       data.nrs
 FROM validol_internal.cot_financial_futures_data AS data
          INNER JOIN validol_internal.cot_derivatives_info AS info
                     ON data.cot_derivatives_info_id = info.id

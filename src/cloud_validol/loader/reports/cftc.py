@@ -22,6 +22,7 @@ def _make_derivative_configs() -> List[cot.DerivativeConfig]:
 
     cftc_disaggregated_futures_only = cot.DerivativeConfig(
         name='cftc_disaggregated_futures_only',
+        source='cftc',
         table_name='cot_disaggregated_data',
         platform_code_col='CFTC_Market_Code',
         derivative_name_col='Market_and_Exchange_Names',
@@ -69,6 +70,7 @@ def _make_derivative_configs() -> List[cot.DerivativeConfig]:
 
     cftc_financial_futures_only = cot.DerivativeConfig(
         name='cftc_financial_futures_only',
+        source='cftc',
         table_name='cot_financial_futures_data',
         platform_code_col='CFTC_Market_Code',
         derivative_name_col='Market_and_Exchange_Names',
@@ -110,6 +112,7 @@ def _make_derivative_configs() -> List[cot.DerivativeConfig]:
 
     cftc_futures_only = cot.DerivativeConfig(
         name='cftc_futures_only',
+        source='cftc',
         table_name='cot_futures_only_data',
         platform_code_col='CFTC Market Code in Initials',
         derivative_name_col='Market and Exchange Names',
@@ -144,106 +147,16 @@ def _make_derivative_configs() -> List[cot.DerivativeConfig]:
 
 
 def _download_doc(
-    config: cot.DerivativeConfig, url: str, date_format: str
-) -> pd.DataFrame:
+    config: cot.DerivativeConfig,
+    url: str,
+) -> str:
     logger.info('Downloading %s for %s', url, config.name)
 
     response = requests.get(url, headers={'User-Agent': 'Mozilla/5.0'})
 
     with zipfile.ZipFile(io.BytesIO(response.content), 'r') as zip_file:
         path = zip_file.namelist()[0]
-        csv_buff = zip_file.read(path).decode('utf-8')
-
-    usecols = [
-        config.platform_code_col,
-        config.derivative_name_col,
-        config.date_col,
-    ] + list(config.data_cols)
-    df = pd.read_csv(
-        io.StringIO(csv_buff),
-        usecols=usecols,
-        parse_dates=[config.date_col],
-        date_parser=lambda x: dt.datetime.strptime(x, date_format).replace(
-            tzinfo=pytz.UTC
-        ),
-    )
-
-    df = df.rename(
-        columns={
-            **config.data_cols,
-            **{
-                config.platform_code_col: 'platform_code',
-                config.date_col: 'event_dttm',
-            },
-        }
-    )
-
-    df.platform_code = [x.strip() for x in df.platform_code]
-
-    platform_names = []
-    derivative_names = []
-    for derivative_dash_platform in df[config.derivative_name_col]:
-        derivative_name, platform_name = derivative_dash_platform.rsplit('-', 1)
-        platform_names.append(platform_name.strip())
-        derivative_names.append(derivative_name.strip())
-
-    df['platform_name'] = platform_names
-    df['derivative_name'] = derivative_names
-
-    del df[config.derivative_name_col]
-
-    return df
-
-
-def _insert_platforms_derivatives(
-    conn: psycopg2.extensions.connection, df: pd.DataFrame
-):
-    derivatives = set()
-    platforms = {}
-    for _, row in df.iterrows():
-        derivatives.add((row.platform_code, row.derivative_name))
-        platforms[row.platform_code] = row.platform_name
-
-    platform_codes, platform_names = zip(*platforms.items())
-
-    with conn.cursor() as cursor:
-        cursor.execute(
-            '''
-            INSERT INTO validol_internal.cot_derivatives_platform (code, name)
-            SELECT UNNEST(%s), UNNEST(%s)
-            ON CONFLICT (code) DO UPDATE SET
-                name = EXCLUDED.name
-            RETURNING id
-        ''',
-            (list(platform_codes), list(platform_names)),
-        )
-        platform_ids = dict(zip(platform_codes, pg.extract_ids_from_cursor(cursor)))
-
-        derivative_platform_ids, derivative_names = zip(
-            *[
-                (platform_ids[platform_code], derivative_name)
-                for platform_code, derivative_name in derivatives
-            ]
-        )
-        cursor.execute(
-            '''
-            INSERT INTO validol_internal.cot_derivatives_info (cot_derivatives_platform_id, name)
-            SELECT UNNEST(%s), UNNEST(%s)
-            ON CONFLICT (cot_derivatives_platform_id, name) DO UPDATE SET
-                name = EXCLUDED.name
-            RETURNING id
-        ''',
-            (list(derivative_platform_ids), list(derivative_names)),
-        )
-
-        derivative_ids = dict(zip(derivatives, pg.extract_ids_from_cursor(cursor)))
-
-    conn.commit()
-
-    df['cot_derivatives_info_id'] = [
-        derivative_ids[row.platform_code, row.derivative_name]
-        for _, row in df.iterrows()
-    ]
+        return zip_file.read(path).decode('utf-8')
 
 
 def update(engine: sqlalchemy.engine.base.Engine, conn: psycopg2.extensions.connection):
@@ -257,39 +170,26 @@ def update(engine: sqlalchemy.engine.base.Engine, conn: psycopg2.extensions.conn
 
         dfs = []
         if update_interval.load_initial:
+            csv_buff = _download_doc(
+                config,
+                config.initial_download_url,
+            )
             dfs.append(
-                _download_doc(
-                    config,
-                    config.initial_download_url,
-                    config.initial_date_format or config.date_format,
+                cot.csv_to_dataframe(
+                    config, config.initial_date_format or config.date_format, csv_buff
                 )
             )
 
         for year in update_interval.years_to_load:
-            dfs.append(
-                _download_doc(
-                    config,
-                    config.year_download_url.format(year=year),
-                    config.date_format,
-                )
+            csv_buff = _download_doc(
+                config,
+                config.year_download_url.format(year=year),
             )
+            dfs.append(cot.csv_to_dataframe(config, config.date_format, csv_buff))
 
         df = pd.concat(dfs)
 
-        _insert_platforms_derivatives(conn, df)
-
-        for column in ['platform_code', 'platform_name', 'derivative_name']:
-            del df[column]
-
-        df['report_type'] = config.report_type
-
-        df.to_sql(
-            config.table_name,
-            engine,
-            schema='validol_internal',
-            index=False,
-            if_exists='append',
-            method=pg.insert_on_conflict_do_nothing,
-        )
+        cot.insert_platforms_derivatives(conn, config, df)
+        cot.insert_data(engine, config, df)
 
     logger.info('Finish updating CFTC data')
