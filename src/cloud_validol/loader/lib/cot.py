@@ -2,6 +2,7 @@ import dataclasses
 import datetime as dt
 import io
 import logging
+from typing import Any
 from typing import Dict
 from typing import List
 from typing import Optional
@@ -26,11 +27,9 @@ class DerivativeConfig:
     date_col: str
     date_format: str
     data_cols: Dict[str, str]
-    year_download_url: str
-    global_from_year: int
     report_type: str
-    initial_download_url: Optional[str] = None
-    initial_date_format: Optional[str] = None
+    initial_from_year: int
+    download_config: Any = None
 
 
 @dataclasses.dataclass
@@ -45,12 +44,16 @@ def get_interval(
     df = pd.read_sql(
         f'''
             SELECT 
-                MAX(DATE(event_dttm)) AS last_event_dt
-            FROM validol_internal.{config.table_name}
-            WHERE report_type = %(report_type)s
+                MAX(DATE(data.event_dttm)) AS last_event_dt
+            FROM validol_internal.{config.table_name} AS data
+            INNER JOIN validol_internal.cot_derivatives_info AS info
+                ON data.cot_derivatives_info_id = info.id
+            INNER JOIN validol_internal.cot_derivatives_platform AS platform
+                ON info.cot_derivatives_platform_id = platform.id
+            WHERE data.report_type = %(report_type)s AND platform.source = %(platform_source)s
         ''',
         engine,
-        params={'report_type': config.report_type},
+        params={'report_type': config.report_type, 'platform_source': config.source},
     )
 
     last_event_dt = df.iloc[0].last_event_dt
@@ -61,7 +64,7 @@ def get_interval(
 
         return UpdateInterval(
             load_initial=True,
-            years_to_load=list(range(config.global_from_year, today.year + 1)),
+            years_to_load=list(range(config.initial_from_year, today.year + 1)),
         )
 
     if last_event_dt >= today:
@@ -79,24 +82,27 @@ def get_interval(
     )
 
 
-def csv_to_dataframe(
-    config: DerivativeConfig, date_format: str, csv_buff: str
+def process_raw_dataframe(
+    config: DerivativeConfig,
+    date_format: str,
+    raw_df: pd.DataFrame,
 ) -> pd.DataFrame:
     usecols = [
         config.platform_code_col,
         config.derivative_name_col,
         config.date_col,
     ] + list(config.data_cols)
-    df = pd.read_csv(
-        io.StringIO(csv_buff),
-        usecols=usecols,
-        parse_dates=[config.date_col],
-        date_parser=lambda x: dt.datetime.strptime(x, date_format).replace(
-            tzinfo=pytz.UTC
-        ),
+    raw_df = raw_df[usecols]
+
+    raw_df = raw_df.assign(
+        **{
+            config.date_col: raw_df[config.date_col].map(
+                lambda x: dt.datetime.strptime(x, date_format).replace(tzinfo=pytz.UTC)
+            )
+        }
     )
 
-    df = df.rename(
+    raw_df = raw_df.rename(
         columns={
             **config.data_cols,
             **{
@@ -106,21 +112,21 @@ def csv_to_dataframe(
         }
     )
 
-    df.platform_code = [x.strip() for x in df.platform_code]
+    raw_df.platform_code = [x.strip() for x in raw_df.platform_code]
 
     platform_names = []
     derivative_names = []
-    for derivative_dash_platform in df[config.derivative_name_col]:
+    for derivative_dash_platform in raw_df[config.derivative_name_col]:
         derivative_name, platform_name = derivative_dash_platform.rsplit('-', 1)
         platform_names.append(platform_name.strip())
         derivative_names.append(derivative_name.strip())
 
-    df['platform_name'] = platform_names
-    df['derivative_name'] = derivative_names
+    raw_df['platform_name'] = platform_names
+    raw_df['derivative_name'] = derivative_names
 
-    del df[config.derivative_name_col]
+    del raw_df[config.derivative_name_col]
 
-    return df
+    return raw_df
 
 
 def insert_platforms_derivatives(

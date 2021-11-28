@@ -134,9 +134,9 @@ CREATE TABLE validol_internal.cot_disaggregated_data
     "4s%"                   DECIMAL,
     "8l%"                   DECIMAL,
     "8s%"                   DECIMAL,
-    sdps_pr                 DECIMAL,
-    mmps_pr                 DECIMAL,
-    orps_pr                 DECIMAL,
+    sdp_spr                 DECIMAL,
+    mmp_spr                 DECIMAL,
+    orp_spr                 DECIMAL,
 
     UNIQUE (cot_derivatives_info_id, report_type, event_dttm)
 );
@@ -150,16 +150,16 @@ CREATE TABLE validol_internal.cot_financial_futures_data
     oi                      DECIMAL,
     dipl                    DECIMAL,
     dips                    DECIMAL,
-    dips_pr                 DECIMAL,
+    dip_spr                 DECIMAL,
     ampl                    DECIMAL,
     amps                    DECIMAL,
-    amps_pr                 DECIMAL,
+    amp_spr                 DECIMAL,
     lmpl                    DECIMAL,
     lmps                    DECIMAL,
-    lmps_pr                 DECIMAL,
+    lmp_spr                 DECIMAL,
     orpl                    DECIMAL,
     orps                    DECIMAL,
-    orps_pr                 DECIMAL,
+    orp_spr                 DECIMAL,
     nrl                     DECIMAL,
     nrs                     DECIMAL,
 
@@ -206,7 +206,7 @@ FROM validol_internal.moex_derivatives_data AS data
          INNER JOIN validol_internal.moex_derivatives_info AS info
                     ON data.moex_derivatives_info_id = info.id;
 
-CREATE VIEW validol.cot_futures_only_data AS
+CREATE VIEW validol.cot_futures_only AS
 SELECT platform.source AS platform_source,
        platform.code   AS platform_code,
        platform.name   AS platform_name,
@@ -230,7 +230,7 @@ FROM validol_internal.cot_futures_only_data AS data
          INNER JOIN validol_internal.cot_derivatives_platform AS platform
                     ON info.cot_derivatives_platform_id = platform.id;
 
-CREATE VIEW validol.cot_disaggregated_data AS
+CREATE VIEW validol.cot_disaggregated AS
 SELECT platform.source       AS platform_source,
        platform.code         AS platform_code,
        platform.name         AS platform_name,
@@ -256,9 +256,9 @@ SELECT platform.source       AS platform_source,
        data."4s%",
        data."8l%",
        data."8s%",
-       data.sdps_pr,
-       data.mmps_pr,
-       data.orps_pr,
+       data.sdp_spr,
+       data.mmp_spr,
+       data.orp_spr,
        data.pmpl + data.sdpl AS cl,
        data.pmps + data.sdps AS cs,
        data.mmpl + data.orpl AS ncl,
@@ -269,7 +269,7 @@ FROM validol_internal.cot_disaggregated_data AS data
          INNER JOIN validol_internal.cot_derivatives_platform AS platform
                     ON info.cot_derivatives_platform_id = platform.id;
 
-CREATE VIEW validol.cot_financial_futures_data AS
+CREATE VIEW validol.cot_financial_futures AS
 SELECT platform.source AS platform_source,
        platform.code   AS platform_code,
        platform.name   AS platform_name,
@@ -279,16 +279,16 @@ SELECT platform.source AS platform_source,
        data.oi,
        data.dipl,
        data.dips,
-       data.dips_pr,
+       data.dip_spr,
        data.ampl,
        data.amps,
-       data.amps_pr,
+       data.amp_spr,
        data.lmpl,
        data.lmps,
-       data.lmps_pr,
+       data.lmp_spr,
        data.orpl,
        data.orps,
-       data.orps_pr,
+       data.orp_spr,
        data.nrl,
        data.nrs
 FROM validol_internal.cot_financial_futures_data AS data

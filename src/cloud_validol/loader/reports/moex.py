@@ -118,11 +118,13 @@ def update(engine: sqlalchemy.engine.base.Engine, conn: psycopg2.extensions.conn
         ''',
             (unique_derivative_names,),
         )
+
+        derivative_name_map_id = dict(
+            zip(unique_derivative_names, pg.extract_ids_from_cursor(cursor))
+        )
+
     conn.commit()
 
-    derivative_name_map_id = dict(
-        zip(unique_derivative_names, pg.extract_ids_from_cursor(cursor))
-    )
     result_df['moex_derivatives_info_id'] = [
         derivative_name_map_id[name] for name in result_df['name']
     ]
