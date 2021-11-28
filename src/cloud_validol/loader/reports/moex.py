@@ -1,6 +1,7 @@
 import datetime as dt
 import io
 import logging
+import time
 from typing import Optional
 from typing import Tuple
 
@@ -103,6 +104,8 @@ def update(engine: sqlalchemy.engine.base.Engine, conn: psycopg2.extensions.conn
         date_data = _download_date(date)
         if date_data is not None:
             dfs.append(_download_date(date))
+
+        time.sleep(2)
 
     result_df = pd.concat(dfs)
 
