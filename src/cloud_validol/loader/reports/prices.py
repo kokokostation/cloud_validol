@@ -4,7 +4,9 @@ from typing import Dict
 
 import investpy
 import pandas as pd
+import psycopg2
 import pytz
+import sqlalchemy
 import tqdm
 
 from cloud_validol.loader.lib import interval_utils
@@ -18,7 +20,7 @@ def _dt_serializer(date: dt.date) -> str:
     return date.strftime('%d/%m/%Y')
 
 
-def _get_intervals(engine) -> Dict[int, Dict[str, str]]:
+def _get_intervals(engine: sqlalchemy.engine.base.Engine) -> Dict[int, Dict[str, str]]:
     df = pd.read_sql(
         '''
         SELECT 
@@ -49,7 +51,7 @@ def _get_intervals(engine) -> Dict[int, Dict[str, str]]:
     return result
 
 
-def update(engine):
+def update(engine: sqlalchemy.engine.base.Engine, conn: psycopg2.extensions.connection):
     logger.info('Start updating prices')
 
     intervals = _get_intervals(engine)

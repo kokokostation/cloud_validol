@@ -3,8 +3,6 @@ import logging
 from typing import Optional
 from typing import Tuple
 
-import pandas as pd
-
 logger = logging.getLogger(__name__)
 
 
@@ -13,7 +11,7 @@ def get_interval(
 ) -> Optional[Tuple[dt.date, dt.date]]:
     to_date = dt.date.today()
 
-    if pd.isnull(last_event_dt):
+    if last_event_dt is None:
         logger.info('No data for %s, downloading from %s', interval_slug, global_from)
 
         return global_from, to_date

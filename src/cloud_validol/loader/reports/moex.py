@@ -5,11 +5,14 @@ from typing import Optional
 from typing import Tuple
 
 import pandas as pd
+import psycopg2
 import pytz
 import requests
+import sqlalchemy
 import tqdm
 
 from cloud_validol.loader.lib import interval_utils
+from cloud_validol.loader.lib import pg
 
 logger = logging.getLogger(__name__)
 
@@ -71,7 +74,9 @@ def _download_date(date: dt.date) -> Optional[pd.DataFrame]:
     )
 
 
-def _get_interval(engine) -> Optional[Tuple[dt.date, dt.date]]:
+def _get_interval(
+    engine: sqlalchemy.engine.base.Engine,
+) -> Optional[Tuple[dt.date, dt.date]]:
     df = pd.read_sql(
         '''
         SELECT MAX(DATE(event_dttm)) AS last_event_dt
@@ -85,7 +90,7 @@ def _get_interval(engine) -> Optional[Tuple[dt.date, dt.date]]:
     return interval_utils.get_interval('moex', last_event_dt, GLOBAL_FROM)
 
 
-def update(engine, conn):
+def update(engine: sqlalchemy.engine.base.Engine, conn: psycopg2.extensions.connection):
     logger.info('Start updating moex data')
 
     interval = _get_interval(engine)
@@ -102,21 +107,21 @@ def update(engine, conn):
     result_df = pd.concat(dfs)
 
     unique_derivative_names = list(result_df.name.unique())
-    cursor = conn.cursor()
-    cursor.execute(
-        '''
-        INSERT INTO validol_internal.moex_derivatives_info (name)
-        SELECT UNNEST(%s)
-        ON CONFLICT (name) DO UPDATE SET
-            name = EXCLUDED.name
-        RETURNING id
-    ''',
-        (unique_derivative_names,),
-    )
+    with conn.cursor() as cursor:
+        cursor.execute(
+            '''
+            INSERT INTO validol_internal.moex_derivatives_info (name)
+            SELECT UNNEST(%s)
+            ON CONFLICT (name) DO UPDATE SET
+                name = EXCLUDED.name
+            RETURNING id
+        ''',
+            (unique_derivative_names,),
+        )
     conn.commit()
 
     derivative_name_map_id = dict(
-        zip(unique_derivative_names, [id_ for id_, in cursor])
+        zip(unique_derivative_names, pg.extract_ids_from_cursor(cursor))
     )
     result_df['moex_derivatives_info_id'] = [
         derivative_name_map_id[name] for name in result_df['name']

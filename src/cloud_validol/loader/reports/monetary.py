@@ -4,13 +4,15 @@ import logging
 
 import numpy as np
 import pandas as pd
+import psycopg2
 import pytz
 import requests
+import sqlalchemy
 
 logger = logging.getLogger(__name__)
 
 
-def update(engine, conn):
+def update(engine: sqlalchemy.engine.base.Engine, conn: psycopg2.extensions.connection):
     logger.info('Start updating stlouisfed data')
 
     dfs = []
@@ -34,8 +36,8 @@ def update(engine, conn):
 
         dfs.append(df)
 
-    cursor = conn.cursor()
-    cursor.execute('TRUNCATE TABLE validol_internal.fredgraph')
+    with conn.cursor() as cursor:
+        cursor.execute('TRUNCATE TABLE validol_internal.fredgraph')
     conn.commit()
 
     pd.concat(dfs).to_sql(
