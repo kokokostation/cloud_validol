@@ -79,10 +79,12 @@ def _download_doc(
     )
 
     df = pd.read_csv(io.StringIO(response.text))
-    df = df.rename(columns={
-        'Swap__Positions_Short_All': 'Swap_Positions_Short_All',
-        'Swap__Positions_Spread_All': 'Swap_Positions_Spread_All',
-    })
+    df = df.rename(
+        columns={
+            'Swap__Positions_Short_All': 'Swap_Positions_Short_All',
+            'Swap__Positions_Spread_All': 'Swap_Positions_Spread_All',
+        }
+    )
 
     return df
 

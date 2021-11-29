@@ -107,6 +107,9 @@ def update(engine: sqlalchemy.engine.base.Engine, conn: psycopg2.extensions.conn
 
         time.sleep(2)
 
+    if not dfs:
+        return
+
     result_df = pd.concat(dfs)
 
     unique_derivative_names = list(result_df.name.unique())
