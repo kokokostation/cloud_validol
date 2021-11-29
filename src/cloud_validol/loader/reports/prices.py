@@ -76,6 +76,7 @@ def update(engine: sqlalchemy.engine.base.Engine, conn: psycopg2.extensions.conn
             index=True,
             index_label='event_dttm',
             if_exists='append',
+            chunksize=10000,
         )
 
     logger.info('Finish updating prices')

@@ -41,7 +41,12 @@ def update(engine: sqlalchemy.engine.base.Engine, conn: psycopg2.extensions.conn
     conn.commit()
 
     pd.concat(dfs).to_sql(
-        'fredgraph', engine, schema='validol_internal', index=False, if_exists='append'
+        'fredgraph',
+        engine,
+        schema='validol_internal',
+        index=False,
+        if_exists='append',
+        chunksize=10000,
     )
 
     logger.info('Finish updating stlouisfed data')

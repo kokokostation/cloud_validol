@@ -142,6 +142,7 @@ def update(engine: sqlalchemy.engine.base.Engine, conn: psycopg2.extensions.conn
         schema='validol_internal',
         index=False,
         if_exists='append',
+        chunksize=10000,
     )
 
     logger.info('Finish updating moex data')

@@ -195,4 +195,5 @@ def insert_data(
         index=False,
         if_exists='append',
         method=pg.insert_on_conflict_do_nothing,
+        chunksize=10000,
     )
