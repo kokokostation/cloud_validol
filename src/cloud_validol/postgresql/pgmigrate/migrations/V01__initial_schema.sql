@@ -82,6 +82,7 @@ CREATE TABLE validol_internal.cot_derivatives_info
     id                          BIGSERIAL PRIMARY KEY,
     cot_derivatives_platform_id BIGINT  NOT NULL REFERENCES validol_internal.cot_derivatives_platform (id),
     name                        VARCHAR NOT NULL,
+    report_type                 report_type NOT NULL,
 
     UNIQUE (cot_derivatives_platform_id, name)
 );
@@ -92,7 +93,6 @@ CREATE TABLE validol_internal.cot_futures_only_data
 (
     id                      BIGSERIAL PRIMARY KEY,
     cot_derivatives_info_id BIGINT      NOT NULL REFERENCES validol_internal.cot_derivatives_info (id),
-    report_type             report_type NOT NULL,
     event_dttm              TIMESTAMPTZ NOT NULL,
     oi                      DECIMAL,
     ncl                     DECIMAL,
@@ -106,14 +106,13 @@ CREATE TABLE validol_internal.cot_futures_only_data
     "8l%"                   DECIMAL,
     "8s%"                   DECIMAL,
 
-    UNIQUE (cot_derivatives_info_id, report_type, event_dttm)
+    UNIQUE (cot_derivatives_info_id, event_dttm)
 );
 
 CREATE TABLE validol_internal.cot_disaggregated_data
 (
     id                      BIGSERIAL PRIMARY KEY,
     cot_derivatives_info_id BIGINT      NOT NULL REFERENCES validol_internal.cot_derivatives_info (id),
-    report_type             report_type NOT NULL,
     event_dttm              TIMESTAMPTZ NOT NULL,
     oi                      DECIMAL,
     nrl                     DECIMAL,
@@ -138,14 +137,13 @@ CREATE TABLE validol_internal.cot_disaggregated_data
     mmp_spr                 DECIMAL,
     orp_spr                 DECIMAL,
 
-    UNIQUE (cot_derivatives_info_id, report_type, event_dttm)
+    UNIQUE (cot_derivatives_info_id, event_dttm)
 );
 
 CREATE TABLE validol_internal.cot_financial_futures_data
 (
     id                      BIGSERIAL PRIMARY KEY,
     cot_derivatives_info_id BIGINT      NOT NULL REFERENCES validol_internal.cot_derivatives_info (id),
-    report_type             report_type NOT NULL,
     event_dttm              TIMESTAMPTZ NOT NULL,
     oi                      DECIMAL,
     dipl                    DECIMAL,
@@ -163,7 +161,7 @@ CREATE TABLE validol_internal.cot_financial_futures_data
     nrl                     DECIMAL,
     nrs                     DECIMAL,
 
-    UNIQUE (cot_derivatives_info_id, report_type, event_dttm)
+    UNIQUE (cot_derivatives_info_id, event_dttm)
 );
 
 
@@ -211,7 +209,7 @@ SELECT platform.source AS platform_source,
        platform.code   AS platform_code,
        platform.name   AS platform_name,
        info.name       AS derivative_name,
-       data.report_type,
+       info.report_type,
        data.event_dttm,
        data.oi,
        data.ncl,
@@ -235,7 +233,7 @@ SELECT platform.source       AS platform_source,
        platform.code         AS platform_code,
        platform.name         AS platform_name,
        info.name             AS derivative_name,
-       data.report_type,
+       info.report_type,
        data.event_dttm,
        data.oi,
        data.nrl,
@@ -274,7 +272,7 @@ SELECT platform.source AS platform_source,
        platform.code   AS platform_code,
        platform.name   AS platform_name,
        info.name       AS derivative_name,
-       data.report_type,
+       info.report_type,
        data.event_dttm,
        data.oi,
        data.dipl,

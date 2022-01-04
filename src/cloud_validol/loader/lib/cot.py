@@ -1,6 +1,5 @@
 import dataclasses
 import datetime as dt
-import io
 import logging
 from typing import Any
 from typing import Dict
@@ -50,7 +49,7 @@ def get_interval(
                 ON data.cot_derivatives_info_id = info.id
             INNER JOIN validol_internal.cot_derivatives_platform AS platform
                 ON info.cot_derivatives_platform_id = platform.id
-            WHERE data.report_type = %(report_type)s AND platform.source = %(platform_source)s
+            WHERE info.report_type = %(report_type)s AND platform.source = %(platform_source)s
         ''',
         engine,
         params={'report_type': config.report_type, 'platform_source': config.source},
@@ -161,13 +160,13 @@ def insert_platforms_derivatives(
         )
         cursor.execute(
             '''
-            INSERT INTO validol_internal.cot_derivatives_info (cot_derivatives_platform_id, name)
-            SELECT UNNEST(%s), UNNEST(%s)
-            ON CONFLICT (cot_derivatives_platform_id, name) DO UPDATE SET
+            INSERT INTO validol_internal.cot_derivatives_info (cot_derivatives_platform_id, name, report_type)
+            SELECT UNNEST(%s), UNNEST(%s), %s
+            ON CONFLICT (cot_derivatives_platform_id, name, report_type) DO UPDATE SET
                 name = EXCLUDED.name
             RETURNING id
         ''',
-            (list(derivative_platform_ids), list(derivative_names)),
+            (list(derivative_platform_ids), list(derivative_names), config.report_type),
         )
 
         derivative_ids = dict(zip(derivatives, pg.extract_ids_from_cursor(cursor)))
@@ -185,8 +184,6 @@ def insert_data(
 ):
     for column in ['platform_code', 'platform_name', 'derivative_name']:
         del df[column]
-
-    df['report_type'] = config.report_type
 
     df.to_sql(
         config.table_name,
