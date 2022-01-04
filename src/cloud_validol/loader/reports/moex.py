@@ -131,7 +131,7 @@ def update(engine: sqlalchemy.engine.base.Engine, conn: psycopg2.extensions.conn
 
     conn.commit()
 
-    result_df['moex_derivatives_info_id'] = [
+    result_df['series_id'] = [
         derivative_name_map_id[name] for name in result_df['name']
     ]
     del result_df['name']

@@ -42,7 +42,7 @@ def update(engine: sqlalchemy.engine.base.Engine, conn: psycopg2.extensions.conn
     conn.commit()
 
     df.to_sql(
-        'fredgraph',
+        'fredgraph_data',
         engine,
         schema='validol_internal',
         index=False,

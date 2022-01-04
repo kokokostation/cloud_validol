@@ -45,11 +45,9 @@ def get_interval(
             SELECT 
                 MAX(DATE(data.event_dttm)) AS last_event_dt
             FROM validol_internal.{config.table_name} AS data
-            INNER JOIN validol_internal.cot_derivatives_info AS info
-                ON data.cot_derivatives_info_id = info.id
-            INNER JOIN validol_internal.cot_derivatives_platform AS platform
-                ON info.cot_derivatives_platform_id = platform.id
-            WHERE info.report_type = %(report_type)s AND platform.source = %(platform_source)s
+            INNER JOIN validol_interface.cot_derivatives_index AS index
+                ON data.series_id = index.series_id
+            WHERE index.report_type = %(report_type)s AND index.platform_source = %(platform_source)s
         ''',
         engine,
         params={'report_type': config.report_type, 'platform_source': config.source},
@@ -173,7 +171,7 @@ def insert_platforms_derivatives(
 
     conn.commit()
 
-    df['cot_derivatives_info_id'] = [
+    df['series_id'] = [
         derivative_ids[row.platform_code, row.derivative_name]
         for _, row in df.iterrows()
     ]

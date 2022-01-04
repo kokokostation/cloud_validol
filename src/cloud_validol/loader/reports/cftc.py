@@ -46,14 +46,14 @@ def _make_derivative_configs() -> List[cot.DerivativeConfig]:
             'Other_Rept_Positions_Short_All': 'orps',
             'NonRept_Positions_Long_All': 'nrl',
             'NonRept_Positions_Short_All': 'nrs',
-            'Conc_Gross_LE_4_TDR_Long_All': '4gl%',
-            'Conc_Gross_LE_4_TDR_Short_All': '4gs%',
-            'Conc_Gross_LE_8_TDR_Long_All': '8gl%',
-            'Conc_Gross_LE_8_TDR_Short_All': '8gs%',
-            'Conc_Net_LE_4_TDR_Long_All': '4l%',
-            'Conc_Net_LE_4_TDR_Short_All': '4s%',
-            'Conc_Net_LE_8_TDR_Long_All': '8l%',
-            'Conc_Net_LE_8_TDR_Short_All': '8s%',
+            'Conc_Gross_LE_4_TDR_Long_All': 'x_4gl_percent',
+            'Conc_Gross_LE_4_TDR_Short_All': 'x_4gs_percent',
+            'Conc_Gross_LE_8_TDR_Long_All': 'x_8gl_percent',
+            'Conc_Gross_LE_8_TDR_Short_All': 'x_8gs_percent',
+            'Conc_Net_LE_4_TDR_Long_All': 'x_4l_percent',
+            'Conc_Net_LE_4_TDR_Short_All': 'x_4s_percent',
+            'Conc_Net_LE_8_TDR_Long_All': 'x_8l_percent',
+            'Conc_Net_LE_8_TDR_Short_All': 'x_8s_percent',
             'Swap__Positions_Spread_All': 'sdp_spr',
             'M_Money_Positions_Spread_All': 'mmp_spr',
             'Other_Rept_Positions_Spread_All': 'orp_spr',
@@ -136,10 +136,10 @@ def _make_derivative_configs() -> List[cot.DerivativeConfig]:
             'Commercial Positions-Short (All)': 'cs',
             'Nonreportable Positions-Long (All)': 'nrl',
             'Nonreportable Positions-Short (All)': 'nrs',
-            'Concentration-Net LT =4 TDR-Long (All)': '4l%',
-            'Concentration-Net LT =4 TDR-Short (All)': '4s%',
-            'Concentration-Net LT =8 TDR-Long (All)': '8l%',
-            'Concentration-Net LT =8 TDR-Short (All)': '8s%',
+            'Concentration-Net LT =4 TDR-Long (All)': 'x_4l_percent',
+            'Concentration-Net LT =4 TDR-Short (All)': 'x_4s_percent',
+            'Concentration-Net LT =8 TDR-Long (All)': 'x_8l_percent',
+            'Concentration-Net LT =8 TDR-Short (All)': 'x_8s_percent',
         },
         report_type='futures_only',
         initial_from_year=2017,
@@ -161,10 +161,15 @@ def _make_derivative_configs() -> List[cot.DerivativeConfig]:
 def _download_doc(
     config: cot.DerivativeConfig,
     url: str,
-) -> pd.DataFrame:
+) -> Optional[pd.DataFrame]:
     logger.info('Downloading %s for %s', url, config.name)
 
     response = requests.get(url, headers={'User-Agent': 'Mozilla/5.0'})
+
+    if response.status_code == 404:
+        logger.error('%s is not found', url)
+
+        return None
 
     with zipfile.ZipFile(io.BytesIO(response.content), 'r') as zip_file:
         path = zip_file.namelist()[0]
@@ -188,20 +193,24 @@ def update(engine: sqlalchemy.engine.base.Engine, conn: psycopg2.extensions.conn
                 config,
                 config.download_config.initial_download_url,
             )
-            dfs.append(
-                cot.process_raw_dataframe(
-                    config,
-                    config.download_config.initial_date_format or config.date_format,
-                    raw_df,
+
+            if raw_df is not None:
+                dfs.append(
+                    cot.process_raw_dataframe(
+                        config,
+                        config.download_config.initial_date_format or config.date_format,
+                        raw_df,
+                    )
                 )
-            )
 
         for year in update_interval.years_to_load:
             raw_df = _download_doc(
                 config,
                 config.download_config.year_download_url.format(year=year),
             )
-            dfs.append(cot.process_raw_dataframe(config, config.date_format, raw_df))
+
+            if raw_df is not None:
+                dfs.append(cot.process_raw_dataframe(config, config.date_format, raw_df))
 
         df = pd.concat(dfs)
 

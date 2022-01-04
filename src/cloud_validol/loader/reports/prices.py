@@ -24,13 +24,13 @@ def _get_intervals(engine: sqlalchemy.engine.base.Engine) -> Dict[int, Dict[str,
     df = pd.read_sql(
         '''
         SELECT 
-            info.id AS info_id,
-            info.currency_cross AS info_currency_cross,
+            index.series_id,
+            MIN(index.currency_cross) AS currency_cross,
             MAX(DATE(event_dttm)) AS last_event_dt
-        FROM validol_internal.investing_prices_info AS info
+        FROM validol_interface.investing_prices_index AS index
         LEFT JOIN validol_internal.investing_prices_data AS data 
-            ON data.investing_prices_info_id = info.id
-        GROUP BY info.id
+            ON data.series_id = index.series_id
+        GROUP BY index.series_id
     ''',
         engine,
     )
@@ -38,12 +38,12 @@ def _get_intervals(engine: sqlalchemy.engine.base.Engine) -> Dict[int, Dict[str,
     result = {}
     for _, row in df.iterrows():
         interval = interval_utils.get_interval(
-            row.info_currency_cross, row.last_event_dt, GLOBAL_FROM
+            row.currency_cross, row.last_event_dt, GLOBAL_FROM
         )
         if interval is not None:
             from_date, to_date = interval
-            result[row.info_id] = {
-                'currency_cross': row.info_currency_cross,
+            result[row.series_id] = {
+                'currency_cross': row.currency_cross,
                 'from_date': _dt_serializer(from_date),
                 'to_date': _dt_serializer(to_date),
             }
@@ -56,7 +56,7 @@ def update(engine: sqlalchemy.engine.base.Engine, conn: psycopg2.extensions.conn
 
     intervals = _get_intervals(engine)
 
-    for info_id, interval in tqdm.tqdm(intervals.items()):
+    for series_id, interval in tqdm.tqdm(intervals.items()):
         df = investpy.get_currency_cross_historical_data(**interval)
         df.index = df.index.map(lambda x: x.replace(tzinfo=pytz.UTC))
         del df['Currency']
@@ -68,7 +68,7 @@ def update(engine: sqlalchemy.engine.base.Engine, conn: psycopg2.extensions.conn
                 'Close': 'close_price',
             }
         )
-        df['investing_prices_info_id'] = info_id
+        df['series_id'] = series_id
         df.to_sql(
             'investing_prices_data',
             engine,

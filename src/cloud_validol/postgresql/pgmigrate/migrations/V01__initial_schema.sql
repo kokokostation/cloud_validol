@@ -45,8 +45,8 @@ CREATE TABLE validol_internal.fredgraph_data
     id         BIGSERIAL PRIMARY KEY,
     series_id  BIGINT      NOT NULL DEFAULT 1 REFERENCES validol_internal.fredgraph_info (id),
     event_dttm TIMESTAMPTZ NOT NULL,
-    mbase      DECIMAL     NOT NULL,
-    tdebt      DECIMAL     NOT NULL,
+    mbase      DECIMAL,
+    tdebt      DECIMAL,
 
     UNIQUE (series_id, event_dttm)
 );
@@ -95,7 +95,7 @@ CREATE TABLE validol_internal.cot_derivatives_info
     name                        VARCHAR     NOT NULL,
     report_type                 report_type NOT NULL,
 
-    UNIQUE (cot_derivatives_platform_id, name)
+    UNIQUE (cot_derivatives_platform_id, name, report_type)
 );
 
 CREATE TABLE validol_internal.cot_futures_only_data
@@ -177,6 +177,9 @@ CREATE TABLE validol_internal.cot_financial_futures_data
 -- interface
 
 CREATE SCHEMA validol_interface;
+GRANT USAGE ON SCHEMA validol_interface TO validol_internal;
+ALTER DEFAULT PRIVILEGES IN SCHEMA validol_interface GRANT ALL PRIVILEGES ON TABLES TO validol_internal;
+GRANT SELECT ON ALL TABLES IN SCHEMA validol_interface TO validol_internal;
 
 CREATE VIEW validol_interface.investing_prices_index AS
 SELECT id AS series_id,
