@@ -36,10 +36,10 @@ CREATE TABLE validol_internal.fredgraph
 (
     id         BIGSERIAL PRIMARY KEY,
     event_dttm TIMESTAMPTZ NOT NULL,
-    sensor     VARCHAR     NOT NULL,
-    value      DECIMAL     NOT NULL,
+    mbase      DECIMAL     NOT NULL,
+    tdebt      DECIMAL     NOT NULL,
 
-    UNIQUE (event_dttm, sensor)
+    UNIQUE (event_dttm)
 );
 
 CREATE TABLE validol_internal.moex_derivatives_info
@@ -187,8 +187,8 @@ FROM validol_internal.investing_prices_data AS data
 
 CREATE VIEW validol.fredgraph AS
 SELECT event_dttm,
-       sensor,
-       value
+       mbase,
+       tdebt
 FROM validol_internal.fredgraph;
 
 CREATE VIEW validol.moex_derivatives AS

@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 def update(engine: sqlalchemy.engine.base.Engine, conn: psycopg2.extensions.connection):
     logger.info('Start updating stlouisfed data')
 
-    dfs = []
+    dfs = {}
     for graph_id, sensor in [('BOGMBASEW', 'MBase'), ('ASTDSL', 'TDebt')]:
         response = requests.get(
             url='https://fred.stlouisfed.org/graph/fredgraph.csv',
@@ -30,17 +30,18 @@ def update(engine: sqlalchemy.engine.base.Engine, conn: psycopg2.extensions.conn
         df['event_dttm'] = df['DATE'].map(
             lambda x: dt.datetime.fromisoformat(x).replace(tzinfo=pytz.UTC)
         )
-        df['sensor'] = sensor
-        df = df.rename(columns={graph_id: 'value'})
+        df = df.rename(columns={graph_id: sensor.lower()})
         del df['DATE']
 
-        dfs.append(df)
+        dfs[sensor] = df
+
+    df = pd.merge(dfs['MBase'], dfs['TDebt'], on='event_dttm', how='outer')
 
     with conn.cursor() as cursor:
         cursor.execute('TRUNCATE TABLE validol_internal.fredgraph')
     conn.commit()
 
-    pd.concat(dfs).to_sql(
+    df.to_sql(
         'fredgraph',
         engine,
         schema='validol_internal',
