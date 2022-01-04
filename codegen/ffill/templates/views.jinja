@@ -1,0 +1,36 @@
+{% for view in views %}
+CREATE VIEW validol.{{ view.name }} AS
+SELECT
+    data.event_dttm,
+    {% for dimension_column in view.dimension_columns %}
+    index.{{ dimension_column }},
+    {% endfor %}
+    {% for measure_column in view.measure_columns %}
+    FIRST_VALUE(data.{{ measure_column }}) OVER (PARTITION BY data.series_id, data.{{ measure_column }}_partition_value ORDER BY data.event_dttm) AS {{ measure_column }}{% if not loop.last %},{% endif +%}
+    {% endfor %}
+FROM (
+    SELECT
+        generated_dates.event_dttm,
+        generated_dates.series_id,
+    {% for measure_column in view.measure_columns %}
+        SUM(CASE WHEN data.{{ measure_column }} IS NULL THEN 0 ELSE 1 END) OVER w AS {{ measure_column }}_partition_value,
+    {% endfor %}
+    {% for measure_column in view.measure_columns %}
+        data.{{ measure_column }}{% if not loop.last %},{% endif +%}
+    {% endfor %}
+    FROM validol_interface.{{ view.name }}_data AS data
+    RIGHT JOIN (
+        SELECT *
+        FROM (SELECT generate_series('2010-01-01T00:00:00+00:00', NOW(), interval '1 day') AS event_dttm) AS q1
+        CROSS JOIN (SELECT series_id FROM validol_interface.{{ view.name }}_index) AS q2
+    ) AS generated_dates
+        ON (
+            data.series_id = generated_dates.series_id AND
+            data.event_dttm = generated_dates.event_dttm
+        )
+    WINDOW w AS (PARTITION BY generated_dates.series_id ORDER BY generated_dates.event_dttm)
+) AS data
+INNER JOIN validol_interface.{{ view.name }}_index AS index
+    ON index.series_id = data.series_id;
+
+{% endfor %}

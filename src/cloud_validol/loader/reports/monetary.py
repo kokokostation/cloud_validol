@@ -38,7 +38,7 @@ def update(engine: sqlalchemy.engine.base.Engine, conn: psycopg2.extensions.conn
     df = pd.merge(dfs['MBase'], dfs['TDebt'], on='event_dttm', how='outer')
 
     with conn.cursor() as cursor:
-        cursor.execute('TRUNCATE TABLE validol_internal.fredgraph')
+        cursor.execute('TRUNCATE TABLE validol_internal.fredgraph_data')
     conn.commit()
 
     df.to_sql(
