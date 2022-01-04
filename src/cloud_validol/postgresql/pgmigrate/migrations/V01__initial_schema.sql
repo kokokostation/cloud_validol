@@ -219,7 +219,7 @@ FROM validol_internal.cot_derivatives_info AS info
                     ON info.cot_derivatives_platform_id = platform.id;
 
 CREATE VIEW validol_interface.cot_futures_only_index AS
-SELECT cot_derivatives_index.*
+SELECT DISTINCT ON(cot_derivatives_index.series_id) cot_derivatives_index.*
 FROM validol_interface.cot_derivatives_index AS cot_derivatives_index
          INNER JOIN validol_internal.cot_futures_only_data AS data
                     ON data.series_id = cot_derivatives_index.series_id;
@@ -229,7 +229,7 @@ SELECT *
 FROM validol_internal.cot_futures_only_data;
 
 CREATE VIEW validol_interface.cot_disaggregated_index AS
-SELECT cot_derivatives_index.*
+SELECT DISTINCT ON(cot_derivatives_index.series_id) cot_derivatives_index.*
 FROM validol_interface.cot_derivatives_index AS cot_derivatives_index
          INNER JOIN validol_internal.cot_disaggregated_data AS data
                     ON data.series_id = cot_derivatives_index.series_id;
@@ -243,7 +243,7 @@ SELECT *,
 FROM validol_internal.cot_disaggregated_data;
 
 CREATE VIEW validol_interface.cot_financial_futures_index AS
-SELECT cot_derivatives_index.*
+SELECT DISTINCT ON(cot_derivatives_index.series_id) cot_derivatives_index.*
 FROM validol_interface.cot_derivatives_index AS cot_derivatives_index
          INNER JOIN validol_internal.cot_financial_futures_data AS data
                     ON data.series_id = cot_derivatives_index.series_id;
