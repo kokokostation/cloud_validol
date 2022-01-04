@@ -7,40 +7,26 @@ CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
 VIEWS = [
     {
         'name': 'fredgraph',
-        'dimension_columns': [
-        ],
+        'dimension_columns': [],
         'measure_columns': [
             'mbase',
             'tdebt',
-        ]
+        ],
     },
     {
         'name': 'investing_prices',
-        'dimension_columns': [
-            'currency_cross'
-        ],
+        'dimension_columns': ['currency_cross'],
         'measure_columns': [
             'open_price',
             'high_price',
             'low_price',
             'close_price',
-        ]
+        ],
     },
     {
         'name': 'moex_derivatives',
-        'dimension_columns': [
-            'derivative_name'
-        ],
-        'measure_columns': [
-            'fl',
-            'fs',
-            'ul',
-            'us',
-            'flq',
-            'fsq',
-            'ulq',
-            'usq'
-        ]
+        'dimension_columns': ['derivative_name'],
+        'measure_columns': ['fl', 'fs', 'ul', 'us', 'flq', 'fsq', 'ulq', 'usq'],
     },
     {
         'name': 'cot_futures_only',
@@ -63,7 +49,7 @@ VIEWS = [
             'x_4s_percent',
             'x_8l_percent',
             'x_8s_percent',
-        ]
+        ],
     },
     {
         'name': 'cot_disaggregated',
@@ -100,8 +86,8 @@ VIEWS = [
             'cl',
             'cs',
             'ncl',
-            'ncs'
-        ]
+            'ncs',
+        ],
     },
     {
         'name': 'cot_financial_futures',
@@ -127,8 +113,8 @@ VIEWS = [
             'orps',
             'orp_spr',
             'nrl',
-            'nrs'
-        ]
+            'nrs',
+        ],
     },
 ]
 
@@ -146,4 +132,3 @@ def main():
 
 if __name__ == '__main__':
     print(main())
-
