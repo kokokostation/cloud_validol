@@ -39,6 +39,11 @@ def _download_date(date: dt.date) -> Optional[pd.DataFrame]:
         headers={'User-Agent': 'Mozilla/5.0'},
     )
 
+    if response.status_code == 404:
+        logger.error('%s is not found', date)
+
+        return None
+
     df = pd.read_csv(
         io.StringIO(response.text),
         parse_dates=['moment'],

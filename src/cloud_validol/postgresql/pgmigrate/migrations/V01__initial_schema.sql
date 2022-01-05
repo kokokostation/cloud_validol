@@ -259,6 +259,7 @@ CREATE SCHEMA validol;
 GRANT USAGE ON SCHEMA validol TO validol_reader;
 ALTER DEFAULT PRIVILEGES IN SCHEMA validol GRANT SELECT ON TABLES TO validol_reader;
 GRANT SELECT ON ALL TABLES IN SCHEMA validol TO validol_reader;
+GRANT USAGE ON SCHEMA validol TO validol_internal;
 
 -- the following code is generated, don't edit it by hand!
 
@@ -290,6 +291,9 @@ FROM (
          INNER JOIN validol_interface.fredgraph_index AS index
                     ON index.series_id = data.series_id;
 
+
+ALTER TABLE validol.fredgraph
+    OWNER TO validol_internal;
 
 CREATE MATERIALIZED VIEW validol.investing_prices AS
 SELECT data.event_dttm,
@@ -330,6 +334,9 @@ FROM (
 
 CREATE INDEX investing_prices_catalogue_index
     ON validol.investing_prices (currency_cross);
+
+ALTER TABLE validol.investing_prices
+    OWNER TO validol_internal;
 
 CREATE MATERIALIZED VIEW validol.moex_derivatives AS
 SELECT data.event_dttm,
@@ -385,6 +392,9 @@ FROM (
 
 CREATE INDEX moex_derivatives_catalogue_index
     ON validol.moex_derivatives (derivative_name);
+
+ALTER TABLE validol.moex_derivatives
+    OWNER TO validol_internal;
 
 CREATE MATERIALIZED VIEW validol.cot_futures_only AS
 SELECT data.event_dttm,
@@ -456,6 +466,9 @@ FROM (
 
 CREATE INDEX cot_futures_only_catalogue_index
     ON validol.cot_futures_only (platform_source, platform_code, derivative_name, report_type);
+
+ALTER TABLE validol.cot_futures_only
+    OWNER TO validol_internal;
 
 CREATE MATERIALIZED VIEW validol.cot_disaggregated AS
 SELECT data.event_dttm,
@@ -588,6 +601,9 @@ FROM (
 CREATE INDEX cot_disaggregated_catalogue_index
     ON validol.cot_disaggregated (platform_source, platform_code, derivative_name, report_type);
 
+ALTER TABLE validol.cot_disaggregated
+    OWNER TO validol_internal;
+
 CREATE MATERIALIZED VIEW validol.cot_financial_futures AS
 SELECT data.event_dttm,
        index.platform_source,
@@ -674,3 +690,6 @@ FROM (
 
 CREATE INDEX cot_financial_futures_catalogue_index
     ON validol.cot_financial_futures (platform_source, platform_code, derivative_name, report_type);
+
+ALTER TABLE validol.cot_financial_futures
+    OWNER TO validol_internal;

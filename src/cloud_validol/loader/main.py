@@ -8,6 +8,7 @@ from cloud_validol.loader.reports import monetary
 from cloud_validol.loader.reports import moex
 from cloud_validol.loader.reports import cftc
 from cloud_validol.loader.reports import ice
+from cloud_validol.loader.reports import refresh_views
 
 logger = logging.getLogger(__name__)
 
@@ -17,6 +18,7 @@ UPDATE_SOURCES = {
     'moex': moex.update,
     'cftc': cftc.update,
     'ice': ice.update,
+    'views': refresh_views.update,
 }
 
 
