@@ -1,5 +1,5 @@
 {% for view in views %}
-CREATE VIEW validol.{{ view.name }} AS
+CREATE MATERIALIZED VIEW validol.{{ view.name }} AS
 SELECT
     data.event_dttm,
     {% for dimension_column in view.dimension_columns %}
@@ -32,5 +32,11 @@ FROM (
 ) AS data
 INNER JOIN validol_interface.{{ view.name }}_index AS index
     ON index.series_id = data.series_id;
+
+{% set index_columns = view.get('index_columns', view.dimension_columns) %}
+{% if index_columns %}
+CREATE INDEX {{ view.name }}_catalogue_index
+    ON validol.{{ view.name }} ({% for index_column in index_columns%}{{ index_column }}{% if not loop.last %}, {% endif %}{% endfor %});
+{% endif %}
 
 {% endfor %}

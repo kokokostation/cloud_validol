@@ -30,6 +30,12 @@ VIEWS = [
     },
     {
         'name': 'cot_futures_only',
+        'index_columns': [
+            'platform_source',
+            'platform_code',
+            'derivative_name',
+            'report_type',
+        ],
         'dimension_columns': [
             'platform_source',
             'platform_code',
@@ -53,6 +59,12 @@ VIEWS = [
     },
     {
         'name': 'cot_disaggregated',
+        'index_columns': [
+            'platform_source',
+            'platform_code',
+            'derivative_name',
+            'report_type',
+        ],
         'dimension_columns': [
             'platform_source',
             'platform_code',
@@ -91,6 +103,12 @@ VIEWS = [
     },
     {
         'name': 'cot_financial_futures',
+        'index_columns': [
+            'platform_source',
+            'platform_code',
+            'derivative_name',
+            'report_type',
+        ],
         'dimension_columns': [
             'platform_source',
             'platform_code',

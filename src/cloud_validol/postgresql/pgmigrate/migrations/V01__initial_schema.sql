@@ -219,7 +219,7 @@ FROM validol_internal.cot_derivatives_info AS info
                     ON info.cot_derivatives_platform_id = platform.id;
 
 CREATE VIEW validol_interface.cot_futures_only_index AS
-SELECT DISTINCT ON(cot_derivatives_index.series_id) cot_derivatives_index.*
+SELECT DISTINCT ON (cot_derivatives_index.series_id) cot_derivatives_index.*
 FROM validol_interface.cot_derivatives_index AS cot_derivatives_index
          INNER JOIN validol_internal.cot_futures_only_data AS data
                     ON data.series_id = cot_derivatives_index.series_id;
@@ -229,7 +229,7 @@ SELECT *
 FROM validol_internal.cot_futures_only_data;
 
 CREATE VIEW validol_interface.cot_disaggregated_index AS
-SELECT DISTINCT ON(cot_derivatives_index.series_id) cot_derivatives_index.*
+SELECT DISTINCT ON (cot_derivatives_index.series_id) cot_derivatives_index.*
 FROM validol_interface.cot_derivatives_index AS cot_derivatives_index
          INNER JOIN validol_internal.cot_disaggregated_data AS data
                     ON data.series_id = cot_derivatives_index.series_id;
@@ -243,7 +243,7 @@ SELECT *,
 FROM validol_internal.cot_disaggregated_data;
 
 CREATE VIEW validol_interface.cot_financial_futures_index AS
-SELECT DISTINCT ON(cot_derivatives_index.series_id) cot_derivatives_index.*
+SELECT DISTINCT ON (cot_derivatives_index.series_id) cot_derivatives_index.*
 FROM validol_interface.cot_derivatives_index AS cot_derivatives_index
          INNER JOIN validol_internal.cot_financial_futures_data AS data
                     ON data.series_id = cot_derivatives_index.series_id;
@@ -262,7 +262,7 @@ GRANT SELECT ON ALL TABLES IN SCHEMA validol TO validol_reader;
 
 -- the following code is generated, don't edit it by hand!
 
-CREATE VIEW validol.fredgraph AS
+CREATE MATERIALIZED VIEW validol.fredgraph AS
 SELECT data.event_dttm,
        FIRST_VALUE(data.mbase)
        OVER (PARTITION BY data.series_id, data.mbase_partition_value ORDER BY data.event_dttm) AS mbase,
@@ -290,7 +290,8 @@ FROM (
          INNER JOIN validol_interface.fredgraph_index AS index
                     ON index.series_id = data.series_id;
 
-CREATE VIEW validol.investing_prices AS
+
+CREATE MATERIALIZED VIEW validol.investing_prices AS
 SELECT data.event_dttm,
        index.currency_cross,
        FIRST_VALUE(data.open_price)
@@ -327,7 +328,10 @@ FROM (
          INNER JOIN validol_interface.investing_prices_index AS index
                     ON index.series_id = data.series_id;
 
-CREATE VIEW validol.moex_derivatives AS
+CREATE INDEX investing_prices_catalogue_index
+    ON validol.investing_prices (currency_cross);
+
+CREATE MATERIALIZED VIEW validol.moex_derivatives AS
 SELECT data.event_dttm,
        index.derivative_name,
        FIRST_VALUE(data.fl) OVER (PARTITION BY data.series_id, data.fl_partition_value ORDER BY data.event_dttm)   AS fl,
@@ -379,7 +383,10 @@ FROM (
          INNER JOIN validol_interface.moex_derivatives_index AS index
                     ON index.series_id = data.series_id;
 
-CREATE VIEW validol.cot_futures_only AS
+CREATE INDEX moex_derivatives_catalogue_index
+    ON validol.moex_derivatives (derivative_name);
+
+CREATE MATERIALIZED VIEW validol.cot_futures_only AS
 SELECT data.event_dttm,
        index.platform_source,
        index.platform_code,
@@ -447,7 +454,10 @@ FROM (
          INNER JOIN validol_interface.cot_futures_only_index AS index
                     ON index.series_id = data.series_id;
 
-CREATE VIEW validol.cot_disaggregated AS
+CREATE INDEX cot_futures_only_catalogue_index
+    ON validol.cot_futures_only (platform_source, platform_code, derivative_name, report_type);
+
+CREATE MATERIALIZED VIEW validol.cot_disaggregated AS
 SELECT data.event_dttm,
        index.platform_source,
        index.platform_code,
@@ -575,7 +585,10 @@ FROM (
          INNER JOIN validol_interface.cot_disaggregated_index AS index
                     ON index.series_id = data.series_id;
 
-CREATE VIEW validol.cot_financial_futures AS
+CREATE INDEX cot_disaggregated_catalogue_index
+    ON validol.cot_disaggregated (platform_source, platform_code, derivative_name, report_type);
+
+CREATE MATERIALIZED VIEW validol.cot_financial_futures AS
 SELECT data.event_dttm,
        index.platform_source,
        index.platform_code,
@@ -658,3 +671,6 @@ FROM (
      ) AS data
          INNER JOIN validol_interface.cot_financial_futures_index AS index
                     ON index.series_id = data.series_id;
+
+CREATE INDEX cot_financial_futures_catalogue_index
+    ON validol.cot_financial_futures (platform_source, platform_code, derivative_name, report_type);
