@@ -178,7 +178,7 @@ CREATE TABLE validol_internal.cot_financial_futures_data
 
 CREATE SCHEMA validol_interface;
 GRANT USAGE ON SCHEMA validol_interface TO validol_internal;
-ALTER DEFAULT PRIVILEGES IN SCHEMA validol_interface GRANT ALL PRIVILEGES ON TABLES TO validol_internal;
+ALTER DEFAULT PRIVILEGES IN SCHEMA validol_interface GRANT SELECT ON TABLES TO validol_internal;
 GRANT SELECT ON ALL TABLES IN SCHEMA validol_interface TO validol_internal;
 
 CREATE VIEW validol_interface.investing_prices_index AS
@@ -257,7 +257,7 @@ FROM validol_internal.cot_financial_futures_data;
 
 CREATE SCHEMA validol;
 GRANT USAGE ON SCHEMA validol TO validol_reader;
-ALTER DEFAULT PRIVILEGES IN SCHEMA validol GRANT ALL PRIVILEGES ON TABLES TO validol_reader;
+ALTER DEFAULT PRIVILEGES IN SCHEMA validol GRANT SELECT ON TABLES TO validol_reader;
 GRANT SELECT ON ALL TABLES IN SCHEMA validol TO validol_reader;
 
 -- the following code is generated, don't edit it by hand!
