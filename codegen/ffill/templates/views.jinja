@@ -22,7 +22,7 @@ FROM (
     RIGHT JOIN (
         SELECT *
         FROM (SELECT generate_series('2010-01-01T00:00:00+00:00', NOW(), interval '1 day') AS event_dttm) AS q1
-        CROSS JOIN (SELECT series_id FROM validol_interface.{{ view.name }}_index) AS q2
+        CROSS JOIN (SELECT series_id FROM validol_interface.{{ view.name }}_index WHERE visible) AS q2
     ) AS generated_dates
         ON (
             data.series_id = generated_dates.series_id AND

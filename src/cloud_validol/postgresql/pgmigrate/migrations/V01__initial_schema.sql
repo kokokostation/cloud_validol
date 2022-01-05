@@ -15,6 +15,7 @@ CREATE TABLE validol_internal.investing_prices_info
 (
     id             BIGSERIAL PRIMARY KEY,
     currency_cross VARCHAR NOT NULL,
+    visible        BOOLEAN NOT NULL DEFAULT TRUE,
 
     UNIQUE (currency_cross)
 );
@@ -34,7 +35,8 @@ CREATE TABLE validol_internal.investing_prices_data
 
 CREATE TABLE validol_internal.fredgraph_info
 (
-    id BIGSERIAL PRIMARY KEY
+    id      BIGSERIAL PRIMARY KEY,
+    visible BOOLEAN NOT NULL DEFAULT TRUE
 );
 
 INSERT INTO validol_internal.fredgraph_info (id)
@@ -53,8 +55,9 @@ CREATE TABLE validol_internal.fredgraph_data
 
 CREATE TABLE validol_internal.moex_derivatives_info
 (
-    id   BIGSERIAL PRIMARY KEY,
-    name VARCHAR NOT NULL,
+    id      BIGSERIAL PRIMARY KEY,
+    name    VARCHAR NOT NULL,
+    visible BOOLEAN NOT NULL DEFAULT FALSE,
 
     UNIQUE (name)
 );
@@ -94,6 +97,7 @@ CREATE TABLE validol_internal.cot_derivatives_info
     cot_derivatives_platform_id BIGINT      NOT NULL REFERENCES validol_internal.cot_derivatives_platform (id),
     name                        VARCHAR     NOT NULL,
     report_type                 report_type NOT NULL,
+    visible                     BOOLEAN     NOT NULL DEFAULT FALSE,
 
     UNIQUE (cot_derivatives_platform_id, name, report_type)
 );
@@ -183,7 +187,8 @@ GRANT SELECT ON ALL TABLES IN SCHEMA validol_interface TO validol_internal;
 
 CREATE VIEW validol_interface.investing_prices_index AS
 SELECT id AS series_id,
-       currency_cross
+       currency_cross,
+       visible
 FROM validol_internal.investing_prices_info;
 
 CREATE VIEW validol_interface.investing_prices_data AS
@@ -191,7 +196,8 @@ SELECT *
 FROM validol_internal.investing_prices_data;
 
 CREATE VIEW validol_interface.fredgraph_index AS
-SELECT id AS series_id
+SELECT id AS series_id,
+       visible
 FROM validol_internal.fredgraph_info;
 
 CREATE VIEW validol_interface.fredgraph_data AS
@@ -200,7 +206,8 @@ FROM validol_internal.fredgraph_data;
 
 CREATE VIEW validol_interface.moex_derivatives_index AS
 SELECT id   AS series_id,
-       name AS derivative_name
+       name AS derivative_name,
+       visible
 FROM validol_internal.moex_derivatives_info;
 
 CREATE VIEW validol_interface.moex_derivatives_data AS
@@ -213,7 +220,8 @@ SELECT info.id         AS series_id,
        platform.code   AS platform_code,
        platform.name   AS platform_name,
        info.name       AS derivative_name,
-       info.report_type
+       info.report_type,
+       info.visible
 FROM validol_internal.cot_derivatives_info AS info
          INNER JOIN validol_internal.cot_derivatives_platform AS platform
                     ON info.cot_derivatives_platform_id = platform.id;
@@ -280,7 +288,7 @@ FROM (
                   RIGHT JOIN (
              SELECT *
              FROM (SELECT generate_series('2010-01-01T00:00:00+00:00', NOW(), interval '1 day') AS event_dttm) AS q1
-                      CROSS JOIN (SELECT series_id FROM validol_interface.fredgraph_index) AS q2
+                      CROSS JOIN (SELECT series_id FROM validol_interface.fredgraph_index WHERE visible) AS q2
          ) AS generated_dates
                              ON (
                                      data.series_id = generated_dates.series_id AND
@@ -321,7 +329,7 @@ FROM (
                   RIGHT JOIN (
              SELECT *
              FROM (SELECT generate_series('2010-01-01T00:00:00+00:00', NOW(), interval '1 day') AS event_dttm) AS q1
-                      CROSS JOIN (SELECT series_id FROM validol_interface.investing_prices_index) AS q2
+                      CROSS JOIN (SELECT series_id FROM validol_interface.investing_prices_index WHERE visible) AS q2
          ) AS generated_dates
                              ON (
                                      data.series_id = generated_dates.series_id AND
@@ -379,7 +387,7 @@ FROM (
                   RIGHT JOIN (
              SELECT *
              FROM (SELECT generate_series('2010-01-01T00:00:00+00:00', NOW(), interval '1 day') AS event_dttm) AS q1
-                      CROSS JOIN (SELECT series_id FROM validol_interface.moex_derivatives_index) AS q2
+                      CROSS JOIN (SELECT series_id FROM validol_interface.moex_derivatives_index WHERE visible) AS q2
          ) AS generated_dates
                              ON (
                                      data.series_id = generated_dates.series_id AND
@@ -453,7 +461,7 @@ FROM (
                   RIGHT JOIN (
              SELECT *
              FROM (SELECT generate_series('2010-01-01T00:00:00+00:00', NOW(), interval '1 day') AS event_dttm) AS q1
-                      CROSS JOIN (SELECT series_id FROM validol_interface.cot_futures_only_index) AS q2
+                      CROSS JOIN (SELECT series_id FROM validol_interface.cot_futures_only_index WHERE visible) AS q2
          ) AS generated_dates
                              ON (
                                      data.series_id = generated_dates.series_id AND
@@ -587,7 +595,7 @@ FROM (
                   RIGHT JOIN (
              SELECT *
              FROM (SELECT generate_series('2010-01-01T00:00:00+00:00', NOW(), interval '1 day') AS event_dttm) AS q1
-                      CROSS JOIN (SELECT series_id FROM validol_interface.cot_disaggregated_index) AS q2
+                      CROSS JOIN (SELECT series_id FROM validol_interface.cot_disaggregated_index WHERE visible) AS q2
          ) AS generated_dates
                              ON (
                                      data.series_id = generated_dates.series_id AND
@@ -677,7 +685,9 @@ FROM (
                   RIGHT JOIN (
              SELECT *
              FROM (SELECT generate_series('2010-01-01T00:00:00+00:00', NOW(), interval '1 day') AS event_dttm) AS q1
-                      CROSS JOIN (SELECT series_id FROM validol_interface.cot_financial_futures_index) AS q2
+                      CROSS JOIN (SELECT series_id
+                                  FROM validol_interface.cot_financial_futures_index
+                                  WHERE visible) AS q2
          ) AS generated_dates
                              ON (
                                      data.series_id = generated_dates.series_id AND
