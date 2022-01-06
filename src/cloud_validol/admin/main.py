@@ -29,5 +29,9 @@ async def init_app():
     return app
 
 
-if __name__ == '__main__':
+def main():
     web.run_app(init_app())
+
+
+if __name__ == '__main__':
+    main()
