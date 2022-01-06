@@ -1,5 +1,3 @@
-import os
-import json
 from typing import Any
 from typing import Dict
 from typing import Iterable
@@ -11,20 +9,7 @@ import pandas as pd
 import psycopg2
 import sqlalchemy
 
-
-SECDIST_PATH = '/etc/cloud_validol/secdist.json'
-
-
-def get_conn_data(conn_data: Optional[Dict[str, str]] = None) -> Dict[str, str]:
-    if conn_data is not None:
-        return conn_data
-    elif os.path.isfile(SECDIST_PATH):
-        with open(SECDIST_PATH) as infile:
-            data = json.load(infile)
-
-        return data['postgresql']
-    else:
-        return os.environ
+from cloud_validol.lib import pg
 
 
 def get_connstr(conn_data: Dict[str, str]) -> str:
@@ -39,13 +24,13 @@ def get_connstr(conn_data: Dict[str, str]) -> str:
 def get_engine(
     conn_data: Optional[Dict[str, str]] = None
 ) -> sqlalchemy.engine.base.Engine:
-    return sqlalchemy.create_engine(get_connstr(get_conn_data(conn_data)))
+    return sqlalchemy.create_engine(get_connstr(pg.get_conn_data(conn_data)))
 
 
 def get_connection(
     conn_data: Optional[Dict[str, str]] = None
 ) -> psycopg2.extensions.connection:
-    conn_data = get_conn_data(conn_data)
+    conn_data = pg.get_conn_data(conn_data)
 
     return psycopg2.connect(
         user=conn_data['DATABASE_USER'],

@@ -198,7 +198,8 @@ def update(engine: sqlalchemy.engine.base.Engine, conn: psycopg2.extensions.conn
                 dfs.append(
                     cot.process_raw_dataframe(
                         config,
-                        config.download_config.initial_date_format or config.date_format,
+                        config.download_config.initial_date_format
+                        or config.date_format,
                         raw_df,
                     )
                 )
@@ -210,7 +211,9 @@ def update(engine: sqlalchemy.engine.base.Engine, conn: psycopg2.extensions.conn
             )
 
             if raw_df is not None:
-                dfs.append(cot.process_raw_dataframe(config, config.date_format, raw_df))
+                dfs.append(
+                    cot.process_raw_dataframe(config, config.date_format, raw_df)
+                )
 
         df = pd.concat(dfs)
 
