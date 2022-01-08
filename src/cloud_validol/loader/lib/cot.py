@@ -18,7 +18,6 @@ logger = logging.getLogger(__name__)
 
 @dataclasses.dataclass
 class DerivativeConfig:
-    name: str
     source: str
     table_name: str
     platform_code_col: str
@@ -57,7 +56,7 @@ def get_interval(
     today = dt.date.today()
 
     if last_event_dt is None:
-        logger.info('No data for %s, downloading from scratch', config.name)
+        logger.info('No data for %s, downloading from scratch', config.source)
 
         return UpdateInterval(
             load_initial=True,
@@ -65,12 +64,14 @@ def get_interval(
         )
 
     if last_event_dt >= today:
-        logger.info('Data for %s is already up-to-date', config.name)
+        logger.info('Data for %s is already up-to-date', config.source)
 
         return None
 
     logger.info(
-        '%s is subject to update, downloading from %s', config.name, last_event_dt.year
+        '%s is subject to update, downloading from %s',
+        config.source,
+        last_event_dt.year,
     )
 
     return UpdateInterval(

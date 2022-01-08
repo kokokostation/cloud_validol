@@ -21,8 +21,7 @@ class IceDownloadConfig:
 
 def _make_derivative_configs() -> List[cot.DerivativeConfig]:
     ice_disaggregated_futures_only = cot.DerivativeConfig(
-        name='ice_disaggregated_futures_only',
-        source='ice',
+        source='ice_futures_only',
         table_name='cot_disaggregated_data',
         platform_code_col='CFTC_Market_Code',
         derivative_name_col='Market_and_Exchange_Names',
@@ -58,7 +57,7 @@ def _make_derivative_configs() -> List[cot.DerivativeConfig]:
     )
 
     ice_disaggregated_combined = copy.deepcopy(ice_disaggregated_futures_only)
-    ice_disaggregated_combined.name = 'ice_disaggregated_combined'
+    ice_disaggregated_combined.source = 'ice_combined'
     ice_disaggregated_combined.download_config.report_type_filter = 'Combined'
     ice_disaggregated_combined.report_type = 'combined'
 

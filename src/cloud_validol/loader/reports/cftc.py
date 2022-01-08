@@ -27,8 +27,7 @@ def _make_derivative_configs() -> List[cot.DerivativeConfig]:
     cftc_date_format = '%Y-%m-%d'
 
     cftc_disaggregated_futures_only = cot.DerivativeConfig(
-        name='cftc_disaggregated_futures_only',
-        source='cftc',
+        source='cftc_disaggregated_futures_only',
         table_name='cot_disaggregated_data',
         platform_code_col='CFTC_Market_Code',
         derivative_name_col='Market_and_Exchange_Names',
@@ -67,7 +66,9 @@ def _make_derivative_configs() -> List[cot.DerivativeConfig]:
     )
 
     cftc_disaggregated_combined = copy.deepcopy(cftc_disaggregated_futures_only)
-    cftc_disaggregated_combined.name = 'cftc_disaggregated_combined'
+    cftc_disaggregated_combined.source = (
+        'cftc_disaggregated_futures_and_options_combined'
+    )
     cftc_disaggregated_combined.download_config.year_download_url = (
         'http://www.cftc.gov/files/dea/history/com_disagg_txt_{year}.zip'
     )
@@ -77,8 +78,7 @@ def _make_derivative_configs() -> List[cot.DerivativeConfig]:
     cftc_disaggregated_combined.report_type = 'combined'
 
     cftc_financial_futures_only = cot.DerivativeConfig(
-        name='cftc_financial_futures_only',
-        source='cftc',
+        source='cftc_financial_futures_futures_only',
         table_name='cot_financial_futures_data',
         platform_code_col='CFTC_Market_Code',
         derivative_name_col='Market_and_Exchange_Names',
@@ -111,7 +111,7 @@ def _make_derivative_configs() -> List[cot.DerivativeConfig]:
     )
 
     cftc_financial_combined = copy.deepcopy(cftc_financial_futures_only)
-    cftc_financial_combined.name = 'cftc_financial_combined'
+    cftc_financial_combined.source = 'cftc_financial_futures_combined'
     cftc_financial_combined.download_config.year_download_url = (
         'http://www.cftc.gov/files/dea/history/com_fin_txt_{year}.zip'
     )
@@ -121,8 +121,7 @@ def _make_derivative_configs() -> List[cot.DerivativeConfig]:
     cftc_financial_combined.report_type = 'combined'
 
     cftc_futures_only = cot.DerivativeConfig(
-        name='cftc_futures_only',
-        source='cftc',
+        source='cftc_futures_only',
         table_name='cot_futures_only_data',
         platform_code_col='CFTC Market Code in Initials',
         derivative_name_col='Market and Exchange Names',
@@ -162,7 +161,7 @@ def _download_doc(
     config: cot.DerivativeConfig,
     url: str,
 ) -> Optional[pd.DataFrame]:
-    logger.info('Downloading %s for %s', url, config.name)
+    logger.info('Downloading %s for %s', url, config.source)
 
     response = requests.get(url, headers={'User-Agent': 'Mozilla/5.0'})
 
