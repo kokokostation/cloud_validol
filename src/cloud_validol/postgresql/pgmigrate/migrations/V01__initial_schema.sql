@@ -23,7 +23,7 @@ CREATE TABLE validol_internal.investing_prices_info
 CREATE TABLE validol_internal.investing_prices_data
 (
     id          BIGSERIAL PRIMARY KEY,
-    series_id   BIGINT      NOT NULL REFERENCES validol_internal.investing_prices_info (id),
+    series_id   BIGINT      NOT NULL REFERENCES validol_internal.investing_prices_info (id) ON DELETE CASCADE,
     event_dttm  TIMESTAMPTZ NOT NULL,
     open_price  DECIMAL     NOT NULL,
     high_price  DECIMAL     NOT NULL,
@@ -45,7 +45,7 @@ VALUES (1);
 CREATE TABLE validol_internal.fredgraph_data
 (
     id         BIGSERIAL PRIMARY KEY,
-    series_id  BIGINT      NOT NULL DEFAULT 1 REFERENCES validol_internal.fredgraph_info (id),
+    series_id  BIGINT      NOT NULL DEFAULT 1 REFERENCES validol_internal.fredgraph_info (id) ON DELETE CASCADE,
     event_dttm TIMESTAMPTZ NOT NULL,
     mbase      DECIMAL,
     tdebt      DECIMAL,
@@ -65,7 +65,7 @@ CREATE TABLE validol_internal.moex_derivatives_info
 CREATE TABLE validol_internal.moex_derivatives_data
 (
     id         BIGSERIAL PRIMARY KEY,
-    series_id  BIGINT      NOT NULL REFERENCES validol_internal.moex_derivatives_info (id),
+    series_id  BIGINT      NOT NULL REFERENCES validol_internal.moex_derivatives_info (id) ON DELETE CASCADE,
     event_dttm TIMESTAMPTZ NOT NULL,
     fl         DECIMAL,
     fs         DECIMAL,
@@ -94,7 +94,7 @@ CREATE TYPE report_type AS ENUM ('futures_only', 'combined');
 CREATE TABLE validol_internal.cot_derivatives_info
 (
     id                          BIGSERIAL PRIMARY KEY,
-    cot_derivatives_platform_id BIGINT      NOT NULL REFERENCES validol_internal.cot_derivatives_platform (id),
+    cot_derivatives_platform_id BIGINT      NOT NULL REFERENCES validol_internal.cot_derivatives_platform (id) ON DELETE CASCADE,
     name                        VARCHAR     NOT NULL,
     report_type                 report_type NOT NULL,
     visible                     BOOLEAN     NOT NULL DEFAULT FALSE,
@@ -105,7 +105,7 @@ CREATE TABLE validol_internal.cot_derivatives_info
 CREATE TABLE validol_internal.cot_futures_only_data
 (
     id           BIGSERIAL PRIMARY KEY,
-    series_id    BIGINT      NOT NULL REFERENCES validol_internal.cot_derivatives_info (id),
+    series_id    BIGINT      NOT NULL REFERENCES validol_internal.cot_derivatives_info (id) ON DELETE CASCADE,
     event_dttm   TIMESTAMPTZ NOT NULL,
     oi           DECIMAL,
     ncl          DECIMAL,
@@ -125,7 +125,7 @@ CREATE TABLE validol_internal.cot_futures_only_data
 CREATE TABLE validol_internal.cot_disaggregated_data
 (
     id            BIGSERIAL PRIMARY KEY,
-    series_id     BIGINT      NOT NULL REFERENCES validol_internal.cot_derivatives_info (id),
+    series_id     BIGINT      NOT NULL REFERENCES validol_internal.cot_derivatives_info (id) ON DELETE CASCADE,
     event_dttm    TIMESTAMPTZ NOT NULL,
     oi            DECIMAL,
     nrl           DECIMAL,
@@ -156,7 +156,7 @@ CREATE TABLE validol_internal.cot_disaggregated_data
 CREATE TABLE validol_internal.cot_financial_futures_data
 (
     id         BIGSERIAL PRIMARY KEY,
-    series_id  BIGINT      NOT NULL REFERENCES validol_internal.cot_derivatives_info (id),
+    series_id  BIGINT      NOT NULL REFERENCES validol_internal.cot_derivatives_info (id) ON DELETE CASCADE,
     event_dttm TIMESTAMPTZ NOT NULL,
     oi         DECIMAL,
     dipl       DECIMAL,
