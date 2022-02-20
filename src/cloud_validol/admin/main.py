@@ -2,6 +2,10 @@ import logging
 
 from aiohttp import web
 
+from cloud_validol.admin.handlers import atom_delete
+from cloud_validol.admin.handlers import atom_post
+from cloud_validol.admin.handlers import atom_put
+from cloud_validol.admin.handlers import atoms_get
 from cloud_validol.admin.handlers import investing_prices_get
 from cloud_validol.admin.handlers import investing_prices_put
 from cloud_validol.admin.handlers import series_get
@@ -23,6 +27,10 @@ async def init_app():
             web.put('/investing_prices', investing_prices_put.handle),
             web.get('/series', series_get.handle),
             web.put('/series', series_put.handle),
+            web.get('/atoms', atoms_get.handle),
+            web.delete('/atom', atom_delete.handle),
+            web.post('/atom', atom_post.handle),
+            web.put('/atom', atom_put.handle),
         ]
     )
 

@@ -9,7 +9,7 @@ import pandas as pd
 import psycopg2
 import sqlalchemy
 
-from cloud_validol.lib import pg
+from cloud_validol.lib import secdist
 
 
 def get_connstr(conn_data: Dict[str, str]) -> str:
@@ -24,13 +24,13 @@ def get_connstr(conn_data: Dict[str, str]) -> str:
 def get_engine(
     conn_data: Optional[Dict[str, str]] = None
 ) -> sqlalchemy.engine.base.Engine:
-    return sqlalchemy.create_engine(get_connstr(pg.get_conn_data(conn_data)))
+    return sqlalchemy.create_engine(get_connstr(secdist.get_pg_conn_data(conn_data)))
 
 
 def get_connection(
     conn_data: Optional[Dict[str, str]] = None
 ) -> psycopg2.extensions.connection:
-    conn_data = pg.get_conn_data(conn_data)
+    conn_data = secdist.get_pg_conn_data(conn_data)
 
     return psycopg2.connect(
         user=conn_data['DATABASE_USER'],
