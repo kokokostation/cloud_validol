@@ -64,7 +64,7 @@ def make_grammar(atom_names: List[str], push: Callable[[ParsedToken], None]):
 def parse_expression(
     expression: str, atom_expressions: Dict[str, Optional[str]]
 ) -> List[ParsedToken]:
-    stack = []
+    stack: List[ParsedToken] = []
     grammar = make_grammar(list(atom_expressions), stack.append)
 
     grammar.parseString(expression, parseAll=True)

@@ -1,29 +1,54 @@
+import dataclasses
 import os
 import json
-from typing import Dict
-from typing import Optional
 
 
 SECDIST_PATH = '/etc/cloud_validol/secdist.json'
 
 
-def get_pg_conn_data(conn_data: Optional[Dict[str, str]] = None) -> Dict[str, str]:
-    if conn_data is not None:
-        return conn_data
-    elif os.path.isfile(SECDIST_PATH):
+@dataclasses.dataclass
+class PgConnData:
+    user: str
+    password: str
+    dbname: str
+    host: str
+
+
+@dataclasses.dataclass
+class SupersetConnData:
+    user: str
+    password: str
+    base_url: str
+
+
+def get_pg_conn_data() -> PgConnData:
+    if os.path.isfile(SECDIST_PATH):
         with open(SECDIST_PATH) as infile:
             data = json.load(infile)
 
-        return data['postgresql']
+        conn_data = data['postgresql']
     else:
-        return os.environ
+        conn_data = os.environ
+
+    return PgConnData(
+        user=conn_data['DATABASE_USER'],
+        password=conn_data['DATABASE_PASSWORD'],
+        dbname=conn_data['DATABASE_DB'],
+        host=conn_data['DATABASE_HOST'],
+    )
 
 
-def get_superset_conn_data() -> Dict[str, str]:
+def get_superset_conn_data() -> SupersetConnData:
     if not os.path.isfile(SECDIST_PATH):
         raise ValueError(f'No secdist at {SECDIST_PATH}')
 
     with open(SECDIST_PATH) as infile:
         data = json.load(infile)
 
-    return data['superset']
+    conn_data = data['superset']
+
+    return SupersetConnData(
+        user=conn_data['USER'],
+        password=conn_data['PASSWORD'],
+        base_url=conn_data['BASE_URL'],
+    )

@@ -50,8 +50,15 @@ class Dataset:
 
 
 @dataclasses.dataclass(frozen=True)
+class Atom:
+    name: str
+    expression: str
+
+
+@dataclasses.dataclass(frozen=True)
 class Response:
     datasets: List[Dataset]
+    atoms: List[Atom]
 
 
 async def _get_datasets() -> List[superset.DatasetItemView]:
@@ -86,9 +93,12 @@ def _get_basic_atom_expressions(
     if not user_expressions:
         return {}
 
-    atom_expressions = {**{atom: None for atom in basic_atoms}, **user_expressions}
-
-    user_atoms, user_atom_expressions = zip(*user_expressions.items())
+    atom_expressions: Dict[str, Optional[str]] = {
+        **{atom: None for atom in basic_atoms},
+        **user_expressions,
+    }
+    user_atoms = list(user_expressions.keys())
+    user_atom_expressions = list(user_expressions.values())
     user_atom_stacks = atom_grammar.get_stacks(user_atom_expressions, atom_expressions)
 
     return {
@@ -111,7 +121,7 @@ def _make_response_dataset(
     for basic_atom in superset_columns_info.basic_atoms:
         result_columns.append(Column(name=basic_atom, state=ColumnState.BASIC.value))
 
-    for atom, user_expression_str in user_expressions:
+    for atom, user_expression_str in user_expressions.items():
         superset_expression_str = superset_columns_info.expressions.get(atom)
         if superset_expression_str is not None:
             superset_expression = SupersetExpression(expression=superset_expression_str)
@@ -164,4 +174,11 @@ async def handle(request: web.Request) -> web.Response:
             _make_response_dataset(superset_dataset, user_expressions)
         )
 
-    return web.json_response(dataclasses.asdict(Response(datasets=response_datasets)))
+    response_atoms = [
+        Atom(name=name, expression=expression)
+        for name, expression in user_expressions.items()
+    ]
+
+    return web.json_response(
+        dataclasses.asdict(Response(datasets=response_datasets, atoms=response_atoms))
+    )

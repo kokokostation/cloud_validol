@@ -2,6 +2,7 @@ import aiohttp
 import contextlib
 import dataclasses
 import json
+from typing import AsyncGenerator
 from typing import Dict
 from typing import List
 from typing import Optional
@@ -25,18 +26,19 @@ class BasicAtomCollision(ColumnError):
 
 
 @contextlib.asynccontextmanager
-async def superset_session() -> aiohttp.ClientSession:
+async def superset_session() -> AsyncGenerator[aiohttp.ClientSession, None]:
     conn_data = secdist.get_superset_conn_data()
-    base_url = conn_data['BASE_URL']
 
-    async with aiohttp.ClientSession(base_url, raise_for_status=True) as session:
+    async with aiohttp.ClientSession(
+        conn_data.base_url, raise_for_status=True
+    ) as session:
         response = await session.post(
             '/api/v1/security/login',
             json={
-                'password': conn_data['PASSWORD'],
+                'password': conn_data.password,
                 'provider': 'db',
                 'refresh': False,
-                'username': conn_data['USER'],
+                'username': conn_data.user,
             },
         )
 
@@ -44,7 +46,9 @@ async def superset_session() -> aiohttp.ClientSession:
         token = response_json['access_token']
 
     async with aiohttp.ClientSession(
-        base_url, headers={'Authorization': f'Bearer {token}'}, raise_for_status=True
+        conn_data.base_url,
+        headers={'Authorization': f'Bearer {token}'},
+        raise_for_status=True,
     ) as session:
         yield session
 
