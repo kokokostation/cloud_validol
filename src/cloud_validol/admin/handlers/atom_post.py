@@ -31,7 +31,7 @@ async def handle(request: web.Request) -> web.Response:
     )
 
     try:
-        atom_grammar.parse_expression(
+        atom_grammar.get_stack(
             request_body.expression,
             atom_grammar.ExpressionLibrary(
                 basic_atoms=dataset_columns.basic_atoms,

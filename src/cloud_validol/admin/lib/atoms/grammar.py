@@ -122,17 +122,13 @@ def flatten_list(list_: List) -> Generator[ParsedToken, None, None]:
             yield item
 
 
-def get_stacks(
-    expressions: List[str],
+def get_stack(
+    expression: str,
     library: ExpressionLibrary,
-) -> List[List[ParsedToken]]:
-    stacks = []
-    for expression in expressions:
-        nested_stack = _get_nested_stack(expression, library, {})
+) -> List[ParsedToken]:
+    nested_stack = _get_nested_stack(expression, library, {})
 
-        stacks.append(list(flatten_list(nested_stack)))
-
-    return stacks
+    return list(flatten_list(nested_stack))
 
 
 def get_dependencies(stack: List[ParsedToken]) -> List[str]:

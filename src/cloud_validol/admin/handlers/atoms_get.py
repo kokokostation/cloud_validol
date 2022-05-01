@@ -74,33 +74,15 @@ async def _get_datasets() -> List[superset.DatasetItemView]:
         )
 
 
-def _get_basic_atom_expressions(
-    basic_atoms: List[str], user_expressions: Dict[str, str]
-) -> Dict[str, str]:
-    if not user_expressions:
-        return {}
-
-    library = atom_grammar.ExpressionLibrary(
-        basic_atoms=basic_atoms, user_expressions=user_expressions
-    )
-    user_atoms = list(user_expressions.keys())
-    user_atom_expressions = list(user_expressions.values())
-    user_atom_stacks = atom_grammar.get_stacks(user_atom_expressions, library)
-
-    return {
-        atom: atom_grammar.render_stack(stack)
-        for atom, stack in zip(user_atoms, user_atom_stacks)
-    }
-
-
 def _make_response_dataset(
     superset_dataset: superset.DatasetItemView, user_expressions: Dict[str, str]
 ) -> Dataset:
     superset_columns_info = server_superset.parse_dataset_columns(
         superset_dataset, list(user_expressions)
     )
-    basic_atom_expressions = _get_basic_atom_expressions(
-        superset_columns_info.basic_atoms, user_expressions
+    library = atom_grammar.ExpressionLibrary(
+        basic_atoms=superset_columns_info.basic_atoms,
+        user_expressions=user_expressions,
     )
 
     result_columns = []
@@ -108,6 +90,17 @@ def _make_response_dataset(
         result_columns.append(Column(name=basic_atom, state=ColumnState.BASIC.value))
 
     for atom, user_expression_str in user_expressions.items():
+        try:
+            stack = atom_grammar.get_stack(user_expression_str, library)
+        except atom_grammar.ParseError:
+            logger.info(
+                'Atom %s is not available for dataset %s', atom, superset_dataset.id
+            )
+            continue
+
+        logger.info('Processing atom %s for dataset %s', atom, superset_dataset.id)
+        basic_atom_expression = atom_grammar.render_stack(stack)
+
         superset_expression_str = superset_columns_info.expressions.get(atom)
         if superset_expression_str is not None:
             superset_expression = SupersetExpression(expression=superset_expression_str)
@@ -125,7 +118,7 @@ def _make_response_dataset(
                 state=state,
                 user_expression=UserExpression(
                     expression=user_expression_str,
-                    basic_atoms_expression=basic_atom_expressions[atom],
+                    basic_atoms_expression=basic_atom_expression,
                 ),
                 superset_expression=superset_expression,
             )
