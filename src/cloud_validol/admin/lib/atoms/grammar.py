@@ -8,10 +8,17 @@ from typing import Callable
 from typing import Dict
 from typing import Generator
 from typing import List
-from typing import Optional
 
 
 logger = logging.getLogger(__name__)
+
+
+class BaseError(Exception):
+    pass
+
+
+class ParseError(BaseError):
+    pass
 
 
 class TokenType(enum.Enum):
@@ -24,6 +31,12 @@ class TokenType(enum.Enum):
 class ParsedToken:
     type: TokenType
     value: Any
+
+
+@dataclasses.dataclass
+class ExpressionLibrary:
+    user_expressions: Dict[str, str]
+    basic_atoms: List[str]
 
 
 def make_grammar(atom_names: List[str], push: Callable[[ParsedToken], None]):
@@ -61,36 +74,42 @@ def make_grammar(atom_names: List[str], push: Callable[[ParsedToken], None]):
     return expr
 
 
-def parse_expression(
-    expression: str, atom_expressions: Dict[str, Optional[str]]
-) -> List[ParsedToken]:
-    stack: List[ParsedToken] = []
-    grammar = make_grammar(list(atom_expressions), stack.append)
+def parse_expression(expression: str, library: ExpressionLibrary) -> List[ParsedToken]:
+    atom_names = list(library.user_expressions) + library.basic_atoms
 
-    grammar.parseString(expression, parseAll=True)
+    stack: List[ParsedToken] = []
+    grammar = make_grammar(atom_names, stack.append)
+
+    try:
+        grammar.parseString(expression, parseAll=True)
+    except pp.ParseBaseException as exc:
+        logger.error('Failed to parse expression=%s: %s', expression, exc)
+
+        raise ParseError(str(exc))
 
     return stack
 
 
 def _get_nested_stack(
     expression: str,
-    atom_expressions: Dict[str, Optional[str]],
+    library: ExpressionLibrary,
     cache: Dict[str, List],
 ) -> List:
     cached_stack = cache.get(expression)
     if cached_stack is not None:
         return cached_stack
 
-    stack: List = parse_expression(expression, atom_expressions)
+    stack: List = parse_expression(expression, library)
     for index, token in enumerate(stack):
         if token.type != TokenType.ATOM:
             continue
 
-        atom_expression = atom_expressions[token.value]
-        if atom_expression is None:
+        if token.value in library.basic_atoms:
             continue
 
-        stack[index] = _get_nested_stack(atom_expression, atom_expressions, cache)
+        atom_expression = library.user_expressions[token.value]
+
+        stack[index] = _get_nested_stack(atom_expression, library, cache)
 
     return stack
 
@@ -104,11 +123,12 @@ def flatten_list(list_: List) -> Generator[ParsedToken, None, None]:
 
 
 def get_stacks(
-    expressions: List[str], atom_expressions: Dict[str, Optional[str]]
+    expressions: List[str],
+    library: ExpressionLibrary,
 ) -> List[List[ParsedToken]]:
     stacks = []
     for expression in expressions:
-        nested_stack = _get_nested_stack(expression, atom_expressions, {})
+        nested_stack = _get_nested_stack(expression, library, {})
 
         stacks.append(list(flatten_list(nested_stack)))
 

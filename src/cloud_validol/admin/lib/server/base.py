@@ -1,18 +1,19 @@
-import dataclasses
-import functools
-import json
+from aiohttp import web
+from typing import Any
+from typing import Dict
+from typing import Type
+from typing import TypeVar
 
 
-def dataclass2json(func):
-    @functools.wraps(func)
-    def wrapped(*args, **kwargs):
-        return json.dumps(dataclasses.asdict(func(*args, **kwargs)))
-
-    return wrapped
+T = TypeVar('T', bound=Any)
 
 
-@dataclass2json
-@dataclasses.dataclass
-class Error:
-    code: str
-    message: str
+async def deser_request_body(request: web.Request, klass: Type[T]) -> T:
+    request_json = await request.json()
+    request_body = klass.Schema().load(request_json)
+
+    return request_body
+
+
+def ser_response_body(response: T) -> Dict:
+    return response.Schema().dump(response)

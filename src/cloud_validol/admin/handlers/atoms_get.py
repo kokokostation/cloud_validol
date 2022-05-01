@@ -8,6 +8,7 @@ from typing import List
 from typing import Optional
 
 from cloud_validol.admin.lib.atoms import grammar as atom_grammar
+from cloud_validol.admin.lib.server import atoms as server_atoms
 from cloud_validol.admin.lib.server import superset as server_superset
 from cloud_validol.admin.lib import superset
 
@@ -73,33 +74,18 @@ async def _get_datasets() -> List[superset.DatasetItemView]:
         )
 
 
-async def _get_user_expressions(request: web.Request) -> Dict[str, str]:
-    async with request.app['pool'].acquire() as conn:
-        rows = await conn.fetch(
-            '''
-            SELECT 
-                name,
-                expression
-            FROM validol_internal.atom
-        '''
-        )
-
-    return {row['name']: row['expression'] for row in rows}
-
-
 def _get_basic_atom_expressions(
     basic_atoms: List[str], user_expressions: Dict[str, str]
 ) -> Dict[str, str]:
     if not user_expressions:
         return {}
 
-    atom_expressions: Dict[str, Optional[str]] = {
-        **{atom: None for atom in basic_atoms},
-        **user_expressions,
-    }
+    library = atom_grammar.ExpressionLibrary(
+        basic_atoms=basic_atoms, user_expressions=user_expressions
+    )
     user_atoms = list(user_expressions.keys())
     user_atom_expressions = list(user_expressions.values())
-    user_atom_stacks = atom_grammar.get_stacks(user_atom_expressions, atom_expressions)
+    user_atom_stacks = atom_grammar.get_stacks(user_atom_expressions, library)
 
     return {
         atom: atom_grammar.render_stack(stack)
@@ -166,7 +152,7 @@ def _make_response_dataset(
 
 async def handle(request: web.Request) -> web.Response:
     superset_datasets = await _get_datasets()
-    user_expressions = await _get_user_expressions(request)
+    user_expressions = await server_atoms.get_user_expressions(request)
 
     response_datasets = []
     for superset_dataset in superset_datasets:
