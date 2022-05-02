@@ -1,13 +1,19 @@
-import aiohttp
 import contextlib
+import copy
 import dataclasses
 import json
+import logging
 from typing import AsyncGenerator
 from typing import Dict
 from typing import List
 from typing import Optional
 
+import aiohttp
+
 from cloud_validol.lib import secdist
+
+
+logger = logging.getLogger(__name__)
 
 
 class BaseError(Exception):
@@ -50,6 +56,10 @@ async def superset_session() -> AsyncGenerator[aiohttp.ClientSession, None]:
         headers={'Authorization': f'Bearer {token}'},
         raise_for_status=True,
     ) as session:
+        response = await session.get('/api/v1/security/csrf_token/')
+        response_json = await response.json()
+        session.headers['X-CSRFToken'] = response_json['result']
+
         yield session
 
 
@@ -130,3 +140,45 @@ def parse_dataset_columns(
                 expressions[column.name] = column.expression
 
     return DatasetColumnsInfo(basic_atoms=basic_atoms, expressions=expressions)
+
+
+async def push_dataset_column(
+    session: aiohttp.ClientSession, pk: int, name: str, expression: str
+) -> None:
+    response = await session.get(f'/api/v1/dataset/{pk}')
+    response_json = await response.json()
+
+    update_request = copy.deepcopy(response_json['result'])
+
+    update_request['database_id'] = update_request['database']['id']
+    del update_request['database']
+    update_request.pop('datasource_type', None)
+    update_request.pop('id', None)
+    update_request.pop('url', None)
+    for column in update_request['columns']:
+        column['is_active'] = True
+        column.pop('changed_on', None)
+        column.pop('created_on', None)
+        column.pop('type_generic', None)
+    for metric in update_request['metrics']:
+        metric.pop('changed_on', None)
+        metric.pop('created_on', None)
+    update_request['owners'] = [owner['id'] for owner in update_request['owners']]
+
+    update_request['columns'].append(
+        {
+            'column_name': name,
+            'expression': expression,
+            'filterable': True,
+            'groupby': False,
+            'is_active': True,
+            'is_dttm': False,
+            'type': 'NUMERIC',
+        }
+    )
+
+    await session.put(
+        f'/api/v1/dataset/{pk}',
+        params={'override_columns': 'false'},
+        json=update_request,
+    )
