@@ -165,20 +165,28 @@ async def push_dataset_column(
         metric.pop('created_on', None)
     update_request['owners'] = [owner['id'] for owner in update_request['owners']]
 
-    update_request['columns'].append(
-        {
-            'column_name': name,
-            'expression': expression,
-            'filterable': True,
-            'groupby': False,
-            'is_active': True,
-            'is_dttm': False,
-            'type': 'NUMERIC',
-        }
-    )
+    push_column_data = {
+        'column_name': name,
+        'expression': expression,
+        'filterable': True,
+        'groupby': False,
+        'is_active': True,
+        'is_dttm': False,
+        'type': 'NUMERIC',
+    }
+    pushed_column = None
+    for column in update_request['columns']:
+        if column['column_name'] == name:
+            pushed_column = column
+            break
+
+    if pushed_column is not None:
+        pushed_column.update(**push_column_data)
+    else:
+        update_request['columns'].append(push_column_data)
 
     await session.put(
         f'/api/v1/dataset/{pk}',
-        params={'override_columns': 'false'},
+        params={'override_columns': 'true'},
         json=update_request,
     )

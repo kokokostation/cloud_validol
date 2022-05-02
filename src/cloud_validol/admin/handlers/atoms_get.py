@@ -51,15 +51,8 @@ class Dataset:
 
 
 @dataclasses.dataclass(frozen=True)
-class Atom:
-    name: str
-    expression: str
-
-
-@dataclasses.dataclass(frozen=True)
 class Response:
     datasets: List[Dataset]
-    atoms: List[Atom]
 
 
 async def _get_datasets() -> List[superset.DatasetItemView]:
@@ -153,11 +146,4 @@ async def handle(request: web.Request) -> web.Response:
             _make_response_dataset(superset_dataset, user_expressions)
         )
 
-    response_atoms = [
-        Atom(name=name, expression=expression)
-        for name, expression in user_expressions.items()
-    ]
-
-    return web.json_response(
-        dataclasses.asdict(Response(datasets=response_datasets, atoms=response_atoms))
-    )
+    return web.json_response(dataclasses.asdict(Response(datasets=response_datasets)))
