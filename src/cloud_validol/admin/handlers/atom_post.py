@@ -1,3 +1,4 @@
+import dataclasses
 import logging
 
 from aiohttp import web
@@ -12,7 +13,8 @@ from cloud_validol.admin.lib.server import base as server_base
 logger = logging.getLogger(__name__)
 
 
-@mdataclasses.dataclass(frozen=True)
+@mdataclasses.add_schema
+@dataclasses.dataclass
 class Request:
     name: str
     expression: str

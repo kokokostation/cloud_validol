@@ -10,8 +10,10 @@ from cloud_validol.admin.handlers import atoms_get
 from cloud_validol.admin.handlers import investing_prices_get
 from cloud_validol.admin.handlers import investing_prices_put
 from cloud_validol.admin.handlers import series_get
-from cloud_validol.admin.handlers import series_put
+from cloud_validol.admin.handlers import series_update_start_post
+from cloud_validol.admin.handlers import series_update_poll_get
 from cloud_validol.admin.lib import pg
+from cloud_validol.admin.lib.server import jobs
 
 
 logging.basicConfig(level=logging.DEBUG)
@@ -27,7 +29,8 @@ async def init_app():
             web.get('/investing_prices', investing_prices_get.handle),
             web.put('/investing_prices', investing_prices_put.handle),
             web.get('/series', series_get.handle),
-            web.put('/series', series_put.handle),
+            web.post('/series/update_start', series_update_start_post.handle),
+            web.get('/series/update_poll', series_update_poll_get.handle),
             web.get('/atoms', atoms_get.handle),
             web.delete('/atom', atom_delete.handle),
             web.post('/atom', atom_post.handle),
@@ -35,6 +38,8 @@ async def init_app():
             web.post('/atom/superset_push', atom_superset_push_post.handle),
         ]
     )
+
+    jobs.setup(app)
 
     return app
 
