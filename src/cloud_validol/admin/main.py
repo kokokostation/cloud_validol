@@ -5,7 +5,7 @@ from aiohttp import web
 from cloud_validol.admin.handlers import atom_delete
 from cloud_validol.admin.handlers import atom_post
 from cloud_validol.admin.handlers import atom_put
-from cloud_validol.admin.handlers import atom_superset_push_post
+from cloud_validol.admin.handlers import atoms_superset_push_post
 from cloud_validol.admin.handlers import atoms_get
 from cloud_validol.admin.handlers import investing_prices_get
 from cloud_validol.admin.handlers import investing_prices_put
@@ -35,7 +35,7 @@ async def init_app():
             web.delete('/atom', atom_delete.handle),
             web.post('/atom', atom_post.handle),
             web.put('/atom', atom_put.handle),
-            web.post('/atom/superset_push', atom_superset_push_post.handle),
+            web.post('/atoms/superset_push', atoms_superset_push_post.handle),
         ]
     )
 

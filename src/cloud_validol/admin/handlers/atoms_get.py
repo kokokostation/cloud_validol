@@ -92,12 +92,12 @@ def _make_response_dataset(
             continue
 
         logger.info('Processing atom %s for dataset %s', atom, superset_dataset.id)
-        basic_atom_expression = atom_grammar.render_stack(stack)
+        basic_atoms_expression = atom_grammar.render_stack(stack)
 
         superset_expression_str = superset_columns_info.expressions.get(atom)
         if superset_expression_str is not None:
             superset_expression = SupersetExpression(expression=superset_expression_str)
-            if superset_expression_str == user_expression_str:
+            if superset_expression_str == basic_atoms_expression:
                 state = ColumnState.IN_SYNC.value
             else:
                 state = ColumnState.SYNC_NEEDED.value
@@ -111,7 +111,7 @@ def _make_response_dataset(
                 state=state,
                 user_expression=UserExpression(
                     expression=user_expression_str,
-                    basic_atoms_expression=basic_atom_expression,
+                    basic_atoms_expression=basic_atoms_expression,
                 ),
                 superset_expression=superset_expression,
             )

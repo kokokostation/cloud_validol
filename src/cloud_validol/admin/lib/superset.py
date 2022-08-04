@@ -88,6 +88,12 @@ class DatasetColumnsInfo:
     expressions: Dict[str, str]
 
 
+@dataclasses.dataclass(frozen=True)
+class ColumnExpression:
+    name: str
+    expression: str
+
+
 async def get_datasets(session: aiohttp.ClientSession) -> List[DatasetListView]:
     query = json.dumps({'page': 0, 'page_size': 100})
     response = await session.get('/api/v1/dataset/', params={'q': query})
@@ -107,11 +113,10 @@ async def get_dataset(session: aiohttp.ClientSession, pk: int) -> DatasetItemVie
 
     columns = []
     for column in response_result['columns']:
-        print(column)
         columns.append(
             DatasetColumn(
                 name=column['column_name'],
-                expression=column.get('expression'),
+                expression=column.get('expression') or None,
                 is_dimension=column.get('groupby', True),
             )
         )
@@ -142,8 +147,10 @@ def parse_dataset_columns(
     return DatasetColumnsInfo(basic_atoms=basic_atoms, expressions=expressions)
 
 
-async def push_dataset_column(
-    session: aiohttp.ClientSession, pk: int, name: str, expression: str
+async def push_dataset_columns(
+    session: aiohttp.ClientSession,
+    pk: int,
+    columns: List[ColumnExpression],
 ) -> None:
     response = await session.get(f'/api/v1/dataset/{pk}')
     response_json = await response.json()
@@ -157,6 +164,8 @@ async def push_dataset_column(
     update_request.pop('url', None)
     for column in update_request['columns']:
         column['is_active'] = True
+        column.pop('id')
+        column.pop('uuid')
         column.pop('changed_on', None)
         column.pop('created_on', None)
         column.pop('type_generic', None)
@@ -165,28 +174,46 @@ async def push_dataset_column(
         metric.pop('created_on', None)
     update_request['owners'] = [owner['id'] for owner in update_request['owners']]
 
-    push_column_data = {
-        'column_name': name,
-        'expression': expression,
-        'filterable': True,
-        'groupby': False,
-        'is_active': True,
-        'is_dttm': False,
-        'type': 'NUMERIC',
-    }
-    pushed_column = None
-    for column in update_request['columns']:
-        if column['column_name'] == name:
-            pushed_column = column
-            break
+    for column in columns:
+        push_column_data = {
+            'column_name': column.name,
+            'expression': column.expression,
+            'filterable': True,
+            'groupby': False,
+            'is_active': True,
+            'is_dttm': False,
+            'type': 'NUMERIC',
+        }
+        pushed_column = None
+        for request_column in update_request['columns']:
+            if request_column['column_name'] == column.name:
+                pushed_column = request_column
+                break
 
-    if pushed_column is not None:
-        pushed_column.update(**push_column_data)
-    else:
-        update_request['columns'].append(push_column_data)
+        if pushed_column is not None:
+            pushed_column.update(**push_column_data)
+        else:
+            update_request['columns'].append(push_column_data)
+
+    reset_request = copy.deepcopy(update_request)
+    reset_request['columns'] = [
+        {
+            'column_name': '__technical_column__',
+            'expression': '1',
+            'filterable': True,
+            'groupby': False,
+            'is_active': True,
+            'is_dttm': False,
+            'type': 'NUMERIC',
+        }
+    ]
 
     await session.put(
         f'/api/v1/dataset/{pk}',
-        params={'override_columns': 'true'},
+        json=reset_request,
+    )
+
+    await session.put(
+        f'/api/v1/dataset/{pk}',
         json=update_request,
     )
