@@ -2,12 +2,14 @@ import copy
 import dataclasses
 import enum
 import logging
-import pyparsing as pp
 from typing import Any
 from typing import Callable
 from typing import Dict
 from typing import Generator
 from typing import List
+
+import networkx as nx
+import pyparsing as pp
 
 
 logger = logging.getLogger(__name__)
@@ -39,7 +41,15 @@ class ExpressionLibrary:
     basic_atoms: List[str]
 
 
-def make_grammar(atom_names: List[str], push: Callable[[ParsedToken], None]):
+def make_atom_grammar():
+    return pp.Word(pp.alphas, pp.alphanums + '-_')
+
+
+def make_expression_grammar(
+    allow_unknown_atoms: bool,
+    atom_names: List[str],
+    push: Callable[[ParsedToken], None],
+):
     push_first = lambda tokens: push(tokens[0])
 
     point = pp.Literal('.')
@@ -52,12 +62,15 @@ def make_grammar(atom_names: List[str], push: Callable[[ParsedToken], None]):
         lambda tokens: ParsedToken(type=TokenType.ARITHMETIC_OPERATION, value=tokens[0])
     )
 
-    timeseries = pp.Or(
-        [
-            pp.Literal(atom_name)
-            for atom_name in sorted(atom_names, key=lambda x: -len(x))
-        ]
-    ).setParseAction(lambda tokens: ParsedToken(type=TokenType.ATOM, value=tokens[0]))
+    atom_expressions = [
+        pp.Literal(atom_name) for atom_name in sorted(atom_names, key=lambda x: -len(x))
+    ]
+    if allow_unknown_atoms:
+        atom_expressions.append(make_atom_grammar())
+
+    timeseries = pp.Or(atom_expressions).setParseAction(
+        lambda tokens: ParsedToken(type=TokenType.ATOM, value=tokens[0])
+    )
     number = pp.Combine(
         pp.Word(pp.nums) + pp.Optional(point + pp.Optional(pp.Word(pp.nums)))
     ).setParseAction(
@@ -74,11 +87,11 @@ def make_grammar(atom_names: List[str], push: Callable[[ParsedToken], None]):
     return expr
 
 
-def parse_expression(expression: str, library: ExpressionLibrary) -> List[ParsedToken]:
-    atom_names = list(library.user_expressions) + library.basic_atoms
-
+def _parse_expression(
+    allow_unknown_atoms: bool, atom_names: List[str], expression: str
+) -> List[ParsedToken]:
     stack: List[ParsedToken] = []
-    grammar = make_grammar(atom_names, stack.append)
+    grammar = make_expression_grammar(allow_unknown_atoms, atom_names, stack.append)
 
     try:
         grammar.parseString(expression, parseAll=True)
@@ -90,16 +103,28 @@ def parse_expression(expression: str, library: ExpressionLibrary) -> List[Parsed
     return stack
 
 
+def check_atom_name(name: str):
+    grammar = make_atom_grammar()
+
+    try:
+        grammar.parseString(name, parseAll=True)
+    except pp.ParseBaseException as exc:
+        logger.error('Failed to parse atom name=%s: %s', name, exc)
+
+        raise ParseError(str(exc))
+
+
 def _get_nested_stack(
-    expression: str,
     library: ExpressionLibrary,
+    expression: str,
     cache: Dict[str, List],
 ) -> List:
     cached_stack = cache.get(expression)
     if cached_stack is not None:
         return cached_stack
 
-    stack: List = parse_expression(expression, library)
+    atom_names = list(library.user_expressions) + library.basic_atoms
+    stack: List = _parse_expression(False, atom_names, expression)
     for index, token in enumerate(stack):
         if token.type != TokenType.ATOM:
             continue
@@ -109,7 +134,7 @@ def _get_nested_stack(
 
         atom_expression = library.user_expressions[token.value]
 
-        stack[index] = _get_nested_stack(atom_expression, library, cache)
+        stack[index] = _get_nested_stack(library, atom_expression, cache)
 
     return stack
 
@@ -126,13 +151,29 @@ def get_stack(
     expression: str,
     library: ExpressionLibrary,
 ) -> List[ParsedToken]:
-    nested_stack = _get_nested_stack(expression, library, {})
+    nested_stack = _get_nested_stack(library, expression, {})
 
     return list(flatten_list(nested_stack))
 
 
-def get_dependencies(stack: List[ParsedToken]) -> List[str]:
+def _get_dependencies(stack: List[ParsedToken]) -> List[str]:
     return list({token.value for token in stack if token.type is TokenType.ATOM})
+
+
+def build_atom_graph(user_expressions: Dict[str, str]) -> nx.DiGraph:
+    graph = nx.DiGraph()
+
+    for atom_name, expression in user_expressions.items():
+        stack = _parse_expression(
+            allow_unknown_atoms=True,
+            atom_names=[],
+            expression=expression,
+        )
+
+        for dep_atom_name in _get_dependencies(stack):
+            graph.add_edge(atom_name, dep_atom_name)
+
+    return graph
 
 
 def _render_stack_helper(stack: List[ParsedToken]) -> str:

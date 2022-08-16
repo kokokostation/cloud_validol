@@ -11,6 +11,7 @@ async def get_user_expressions(request: web.Request) -> Dict[str, str]:
                 name,
                 expression
             FROM validol_internal.atom
+            WHERE deleted_at IS NULL
         '''
         )
 
@@ -34,3 +35,15 @@ async def insert_user_expression(
             )
     except asyncpg.exceptions.UniqueViolationError:
         raise web.HTTPBadRequest(reason=f'Expression name={name} already exists')
+
+
+async def delete_user_expression(request: web.Request, name: str) -> None:
+    async with request.app['pool'].acquire() as conn:
+        await conn.execute(
+            '''
+            UPDATE validol_internal.atom
+            SET deleted_at = NOW()
+            WHERE name = $1
+        ''',
+            name,
+        )

@@ -24,6 +24,11 @@ class Request:
 async def handle(request: web.Request) -> web.Response:
     request_body = await server_base.deser_request_body(request, Request)
 
+    try:
+        atom_grammar.check_atom_name(request_body.name)
+    except atom_grammar.ParseError as exc:
+        raise web.HTTPBadRequest(reason=f'Bad atom name: {exc}')
+
     async with superset.superset_session() as session:
         dataset = await superset.get_dataset(session, request_body.superset_dataset_id)
     user_expressions = await server_atoms.get_user_expressions(request)
@@ -34,11 +39,11 @@ async def handle(request: web.Request) -> web.Response:
 
     try:
         atom_grammar.get_stack(
-            request_body.expression,
-            atom_grammar.ExpressionLibrary(
+            library=atom_grammar.ExpressionLibrary(
                 basic_atoms=dataset_columns.basic_atoms,
                 user_expressions=user_expressions,
             ),
+            expression=request_body.expression,
         )
     except atom_grammar.ParseError as exc:
         raise web.HTTPBadRequest(reason=f'Failed to parse expression: {exc}')

@@ -84,7 +84,9 @@ def _make_response_dataset(
 
     for atom, user_expression_str in user_expressions.items():
         try:
-            stack = atom_grammar.get_stack(user_expression_str, library)
+            stack = atom_grammar.get_stack(
+                library=library, expression=user_expression_str
+            )
         except atom_grammar.ParseError:
             logger.info(
                 'Atom %s is not available for dataset %s', atom, superset_dataset.id
