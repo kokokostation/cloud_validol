@@ -85,7 +85,9 @@ def _make_response_dataset(
     for atom, user_expression_str in user_expressions.items():
         try:
             stack = atom_grammar.get_stack(
-                library=library, expression=user_expression_str
+                allow_unknown_atoms=False,
+                library=library,
+                expression=user_expression_str,
             )
         except atom_grammar.ParseError:
             logger.info(

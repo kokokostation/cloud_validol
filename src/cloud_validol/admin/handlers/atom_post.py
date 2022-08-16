@@ -39,6 +39,7 @@ async def handle(request: web.Request) -> web.Response:
 
     try:
         atom_grammar.get_stack(
+            allow_unknown_atoms=False,
             library=atom_grammar.ExpressionLibrary(
                 basic_atoms=dataset_columns.basic_atoms,
                 user_expressions=user_expressions,

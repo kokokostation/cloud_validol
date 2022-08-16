@@ -47,3 +47,18 @@ async def delete_user_expression(request: web.Request, name: str) -> None:
         ''',
             name,
         )
+
+
+async def update_user_expression(
+    request: web.Request, name: str, expression: str
+) -> None:
+    async with request.app['pool'].acquire() as conn:
+        await conn.execute(
+            '''
+            UPDATE validol_internal.atom
+            SET expression = $2
+            WHERE name = $1
+        ''',
+            name,
+            expression,
+        )

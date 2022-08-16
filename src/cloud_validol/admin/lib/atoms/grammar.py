@@ -7,6 +7,7 @@ from typing import Callable
 from typing import Dict
 from typing import Generator
 from typing import List
+from typing import Set
 
 import networkx as nx
 import pyparsing as pp
@@ -115,6 +116,7 @@ def check_atom_name(name: str):
 
 
 def _get_nested_stack(
+    allow_unknown_atoms: bool,
     library: ExpressionLibrary,
     expression: str,
     cache: Dict[str, List],
@@ -124,7 +126,7 @@ def _get_nested_stack(
         return cached_stack
 
     atom_names = list(library.user_expressions) + library.basic_atoms
-    stack: List = _parse_expression(False, atom_names, expression)
+    stack: List = _parse_expression(allow_unknown_atoms, atom_names, expression)
     for index, token in enumerate(stack):
         if token.type != TokenType.ATOM:
             continue
@@ -132,9 +134,14 @@ def _get_nested_stack(
         if token.value in library.basic_atoms:
             continue
 
+        if allow_unknown_atoms and token.value not in library.user_expressions:
+            continue
+
         atom_expression = library.user_expressions[token.value]
 
-        stack[index] = _get_nested_stack(library, atom_expression, cache)
+        stack[index] = _get_nested_stack(
+            allow_unknown_atoms, library, atom_expression, cache
+        )
 
     return stack
 
@@ -148,16 +155,17 @@ def flatten_list(list_: List) -> Generator[ParsedToken, None, None]:
 
 
 def get_stack(
+    allow_unknown_atoms: bool,
     expression: str,
     library: ExpressionLibrary,
 ) -> List[ParsedToken]:
-    nested_stack = _get_nested_stack(library, expression, {})
+    nested_stack = _get_nested_stack(allow_unknown_atoms, library, expression, {})
 
     return list(flatten_list(nested_stack))
 
 
-def _get_dependencies(stack: List[ParsedToken]) -> List[str]:
-    return list({token.value for token in stack if token.type is TokenType.ATOM})
+def get_dependencies(stack: List[ParsedToken]) -> Set[str]:
+    return {token.value for token in stack if token.type is TokenType.ATOM}
 
 
 def build_atom_graph(user_expressions: Dict[str, str]) -> nx.DiGraph:
@@ -170,7 +178,8 @@ def build_atom_graph(user_expressions: Dict[str, str]) -> nx.DiGraph:
             expression=expression,
         )
 
-        for dep_atom_name in _get_dependencies(stack):
+        graph.add_node(atom_name)
+        for dep_atom_name in get_dependencies(stack):
             graph.add_edge(atom_name, dep_atom_name)
 
     return graph
