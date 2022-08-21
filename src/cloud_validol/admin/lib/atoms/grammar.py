@@ -193,8 +193,8 @@ def _render_stack_helper(stack: List[ParsedToken]) -> str:
     elif token.type is TokenType.NUMBER:
         return str(token.value)
     elif token.type is TokenType.ARITHMETIC_OPERATION:
-        left_operand = _render_stack_helper(stack)
         right_operand = _render_stack_helper(stack)
+        left_operand = _render_stack_helper(stack)
 
         return f'({left_operand} {token.value} {right_operand})'
     else:
