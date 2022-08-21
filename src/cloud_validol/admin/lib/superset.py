@@ -159,6 +159,7 @@ async def push_dataset_columns(
 
     update_request['database_id'] = update_request['database']['id']
     del update_request['database']
+    del update_request['kind']
     update_request.pop('datasource_type', None)
     update_request.pop('id', None)
     update_request.pop('url', None)
